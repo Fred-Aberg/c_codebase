@@ -61,7 +61,7 @@ int tl_init_grid(uint res_x, int scr_size_x, int scr_size_y, Color def_col, Font
     GRID->default_col = def_col;
     GRID->default_font = def_font;
     GRID->tile_size_x = scr_size_x / res_x;
-    GRID->tile_size_y = (scr_size_x / res_x) * 1.1f;
+    GRID->tile_size_y = (scr_size_x / res_x) * 1.2f;
 
     // Calculate allowed res_y based on scr_size_y
     GRID->resolution_y = floor(scr_size_y / GRID->tile_size_y);
@@ -122,9 +122,9 @@ void tl_draw_tile(uint x, uint y, char smbl, Color char_col, Color bg_col, Font 
 
 void tl_draw_rect(uint x0, uint y0, uint width, uint height, char smbl, Color char_col, Color bg_col, Font *font)
 {
-    for (uint _x = x0; _x < x0 + width; _x++)
+    for (uint _x = x0; _x <= x0 + width; _x++)
     {
-        for (uint _y = y0; _y < y0 + height; _y++)
+        for (uint _y = y0; _y <= y0 + height; _y++)
         {
             tl_draw_tile(_x, _y, smbl, char_col, bg_col, font);
         }
@@ -164,7 +164,7 @@ void tl_draw_line(uint x0, uint y0, uint x1, uint y1, char smbl, Color char_col,
 }
 
 
-void tl_draw_text(uint x, uint y, uint wrap, char *text, uint len, Color char_col, Color bg_col, Font *font)
+uint tl_draw_text(uint x, uint y, uint wrap, char *text, uint len, Color char_col, Color bg_col, Font *font)
 {
     uint _x = x;
     uint _y = y;
@@ -178,6 +178,8 @@ void tl_draw_text(uint x, uint y, uint wrap, char *text, uint len, Color char_co
         _x++;
         if (_x >= wrap || text[i] == '\n') {_x = x; _y++;}
     }
+
+    return _y - y + 1; // Rows written
 }
 
 Vector2 tl_get_grid_coords(Vector2 xy)

@@ -3,12 +3,14 @@
 #include "raytiles.h"
 #include <raylib.h>
 
+/// @brief std. name: element_style
 typedef struct 
 {
     Color bg_col;
     Color char_col;    
 }UIElementStyle_t;
 
+/// @brief std. name: box_style
 typedef struct 
 {
     Color bg_col;
@@ -30,12 +32,14 @@ typedef enum
 
 typedef int (*UI_side_effect_func)(void *domain, void *type_data, KeyboardKey input);
 
+/// @brief std. name: ui_element
 typedef struct
 {
     UIElementStyle_t style;
     UIElemenType_e type;
     UI_side_effect_func side_effect_func;
     void *type_data;
+    uint text_len;
     char *text;
 }UIElement_t;
 
@@ -46,7 +50,10 @@ typedef enum
     UI_CAMERA       // TODO: Implement
 }UIBoxType_e;
 
-typedef struct
+typedef struct UIBox UIBox_t;
+
+/// @brief std. name: ui_box
+typedef struct UIBox
 {
     UIBoxStyle_t style;
     UIBoxType_e type;
@@ -74,6 +81,7 @@ typedef struct
     UIBox_t *box_selected;
 } Cursor_t;
 
+/// @brief std. name: ui_cntxt
 typedef struct 
 {
     Cursor_t cursor;
@@ -115,7 +123,7 @@ void ascui_ui_box_set_ngbrs(UIBox_t *ui_box,
                             UIBox_t *w_ngbr,
                             UIBox_t *e_ngbr);
 
-void ascui_ui_box_add_element(UIBox_t *ui_box, UIElement_t *element);
+void ascui_ui_box_add_element(UIBox_t *ui_box, UIElement_t *ui_element);
 
 void ascui_ui_box_remove_element(UIBox_t *ui_box, uint i);
 

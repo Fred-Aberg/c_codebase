@@ -20,7 +20,7 @@ void tl_draw_rect(uint x, uint y, uint width, uint height, char smbl, Color char
 
 void tl_draw_line(uint x_start, uint y_start, uint x_end, uint y_end, char smbl, Color char_col, Color bg_col, Font *font);
 
-void tl_draw_text(uint x, uint y, uint wrap, char *text, uint len, Color char_col, Color bg_col, Font *font);
+uint tl_draw_text(uint x, uint y, uint wrap, char *text, uint len, Color char_col, Color bg_col, Font *font);
 
 Vector2 tl_get_grid_coords(Vector2 xy);
 

@@ -144,3 +144,10 @@ void ascui_ui_element_destroy(UIElement_t *ui_element);
 void ascui_ui_element_set_style_with_ptr(UIElement_t *ui_element, UIElementStyle_t *style);
 
 void ascui_ui_element_set_style(UIElement_t *ui_element, Color bg_col, Color char_col);
+
+#define LEFT_ALIGNED 0
+#define RIGHT_ALIGNED 1
+#define CENTERED 2
+void tl_draw_text_prose(uint x, uint y, uint wrap, char *text, uint len, Color char_col, Color bg_col, Font *font, uint word_mode, uint align_mode);
+
+uint ascui_ui_element_calc_rows(uint wrap, char *text, uint len);

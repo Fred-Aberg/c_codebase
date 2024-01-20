@@ -76,7 +76,7 @@ uint *ui_element_get_length_profile(UIElement_t **ui_elements, uint num_elements
     uint c_len = 0;
 
     UIElement_t c_ui_element;
-    printf("\nLength of elements:");
+    // printf("\nLength of elements:");
     for (size_t i = 0; i < num_elements; i++)
     {
         c_len = 1;
@@ -98,7 +98,7 @@ uint *ui_element_get_length_profile(UIElement_t **ui_elements, uint num_elements
         }
         
         length_profile[i] = c_len; // len = #rows + #linebrakes
-        printf("\n    %ld: %d", i, c_len);
+        // printf("\n    %ld: %d", i, c_len);
     }
     
 
@@ -164,7 +164,7 @@ void draw_box_elements(UIBox_t *ui_box)
 
         current_ui_element = *ui_box->ui_elements[i];
 
-        bg_col = (ui_box->element_selected == i)? BLUE : current_ui_element.style.bg_col;
+        bg_col = (ui_box->element_selected == i)? (Color){ 0, 180, 255, 255 } : current_ui_element.style.bg_col;
 
         row += tl_draw_text(ui_box->pos.x + 1, ui_box->pos.y + 1 + row, ui_box->pos.x + ui_box->width,
                             current_ui_element.text, current_ui_element.text_len, current_ui_element.style.char_col,
@@ -397,4 +397,80 @@ void ascui_ui_element_set_style(UIElement_t *ui_element, Color bg_col, Color cha
 {
     ui_element->style.bg_col = bg_col;
     ui_element->style.char_col = char_col;
+}
+
+bool is_word_char(char c)
+{
+    return (c != ' ' && c != '\n');
+}
+
+uint ascui_ui_element_calc_rows(uint wrap, char *text, uint len)
+{
+    uint current_line_len = 0;
+    uint row_count = 1;
+
+    size_t j = 0;
+    for (size_t i = 0; i < len && text[i] != '\0'; i++)
+    {
+        if(text[i] == '\n') {row_count++; current_line_len = 0; continue;}
+
+        // New word found
+        if (is_word_char(text[i])) 
+        {
+
+            // Count up to 'j' until end of word, j is the length of the word
+            for (j = i; j < len; j++)
+                if (!is_word_char(text[i+j])) break;
+
+
+            int overflow = current_line_len + j - wrap;
+            printf("\n\nNew word found [%ld] OF: %d\n   \"%s\"", j, overflow, text + i);
+            // i = word start
+            // i+j = word end
+            // current_line_len+j = word length
+            // overflow = number of chars above wrap
+
+            // No overflow, simply continue
+            if (overflow <= 0)
+            {
+                i += j;
+                current_line_len += j;
+            }
+            // Overflow, either move or split
+            else if (overflow > 0)
+            {
+                uint wb = wrap - (j - overflow);
+
+                // Split
+                if (wb > 2)
+                {
+                    row_count++;
+                    current_line_len = 0;
+                    i += overflow + 1; // + 1 since the last of 'wb' is set to '-' 
+                }
+                else // Move
+                {
+                    row_count++;
+                    current_line_len = j; // new line begins with the word
+                }
+            }
+        }
+        else // Non-word character
+        {
+            current_line_len++;
+        }
+        
+        if (current_line_len >= wrap)
+        {
+            row_count++;
+            current_line_len = 0;
+        }
+    }
+}
+
+
+
+void tl_draw_text_prose(uint x, uint y, uint wrap, char *text, uint len, Color char_col, Color bg_col, Font *font, uint word_mode, uint align_mode)
+{
+
 }

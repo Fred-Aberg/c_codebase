@@ -25,6 +25,8 @@ const int APP_X_SIZE = APP_RES_X + 1;
 
 int main(void)
 {
+    char *str = "HELLO Ambiguos cookies.";
+    printf("%s\n -> %d\n", str, ascui_ui_element_calc_rows(5, str, strlen(str)));
     /// SETUP
     InitWindow(SCREENSIZE_X, SCREENSIZE_Y, "ascUI 2024");
 
@@ -36,17 +38,17 @@ int main(void)
     UIBox_t *test_ui_box = ascui_ui_box_create(UI_ACTION_LIST, pos(17,3), 10, 10);
     ascui_ui_box_set_style(test_ui_box, RAYWHITE, GRAY, DARKGRAY, '-', '|', '+');
 
-    UIBox_t *test_2_ui_box = ascui_ui_box_create(UI_ACTION_LIST, pos(0,0), 25, APP_Y_SIZE-5);
-    ascui_ui_box_set_style(test_2_ui_box, RAYWHITE, GRAY, DARKGRAY, '=', 'I', 'O');
+    UIBox_t *test_2_ui_box = ascui_ui_box_create(UI_ACTION_LIST, pos(2,2), 20, APP_Y_SIZE-5);
+    ascui_ui_box_set_style(test_2_ui_box, RAYWHITE, GREEN, DARKGREEN, '=', 'I', 'O');
 
     // ascui_ui_context_add_box(ui_cntxt, test_ui_box);
     ascui_ui_context_add_box(ui_cntxt, test_2_ui_box);
 
-    UIElement_t *test_1_ui_element = ascui_ui_element_create(UI_TEXT, NULL, NULL, "> HEMLO!\n | +1 sad");
+    UIElement_t *test_1_ui_element = ascui_ui_element_create(UI_TEXT, NULL, NULL, "> Not feeling great today....");
     ascui_ui_element_set_style(test_1_ui_element, RAYWHITE, DARKBLUE);
-    UIElement_t *test_2_ui_element = ascui_ui_element_create(UI_TEXT, NULL, NULL, "> Nir nor\n | +10 HP\n | +100 shame");
+    UIElement_t *test_2_ui_element = ascui_ui_element_create(UI_TEXT, NULL, NULL, "\n  > Stop that");
     ascui_ui_element_set_style(test_2_ui_element, RAYWHITE, DARKBLUE);
-    UIElement_t *test_3_ui_element = ascui_ui_element_create(UI_TEXT, NULL, NULL, "> Eat gammloger pesto\n | -5 HP\n | +10 pride");
+    UIElement_t *test_3_ui_element = ascui_ui_element_create(UI_TEXT, NULL, NULL, "\n  > NO ):<\n");
     ascui_ui_element_set_style(test_3_ui_element, RAYWHITE, DARKBLUE);
     UIElement_t *test_4_ui_element = ascui_ui_element_create(UI_TEXT, NULL, NULL, "> your daily subliminal message:\nyou want to play animal crossing. you love animal crossing");
     ascui_ui_element_set_style(test_4_ui_element, RAYWHITE, DARKBLUE);

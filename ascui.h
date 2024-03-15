@@ -2,6 +2,7 @@
 #include "common.h"
 #include "raytiles.h"
 #include <raylib.h>
+#include "stdbool.h"
 
 /// @brief std. name: element_style
 typedef struct 
@@ -40,14 +41,15 @@ typedef struct
     UI_side_effect_func side_effect_func;
     void *type_data;
     uint text_len;
-    char *text;
+    char *text;			// Must be owned by UI_Element
+    uint rows_required; // NOTE: Should be updated if box's width changes!
 }UIElement_t;
 
 typedef enum
 {
     UI_ACTION_LIST, // TODO: Implement
     UI_POPUP,       // TODO: Implement
-    UI_CAMERA       // TODO: Implement
+    UI_CAMERA       // TODO: Implement (Subgrid)
 }UIBoxType_e;
 
 typedef struct UIBox UIBox_t;
@@ -123,7 +125,7 @@ void ascui_ui_box_set_ngbrs(UIBox_t *ui_box,
                             UIBox_t *w_ngbr,
                             UIBox_t *e_ngbr);
 
-void ascui_ui_box_add_element(UIBox_t *ui_box, UIElement_t *ui_element);
+void ascui_ui_box_add_element(UIBox_t *ui_box, UIElement_t *ui_element, bool text_allocated);
 
 void ascui_ui_box_remove_element(UIBox_t *ui_box, uint i);
 
@@ -145,9 +147,9 @@ void ascui_ui_element_set_style_with_ptr(UIElement_t *ui_element, UIElementStyle
 
 void ascui_ui_element_set_style(UIElement_t *ui_element, Color bg_col, Color char_col);
 
-#define LEFT_ALIGNED 0
-#define RIGHT_ALIGNED 1
-#define CENTERED 2
-void tl_draw_text_prose(uint x, uint y, uint wrap, char *text, uint len, Color char_col, Color bg_col, Font *font, uint word_mode, uint align_mode);
+// #define LEFT_ALIGNED 0
+// #define RIGHT_ALIGNED 1
+// #define CENTERED 2
+// void tl_draw_text_prose(uint x, uint y, uint wrap, char *text, uint len, Color char_col, Color bg_col, Font *font, uint word_mode, uint align_mode);
 
-uint ascui_ui_element_calc_rows(uint wrap, char *text, uint len);
+char *ascui_wrap_str(char *str, uint *calc_rows, uint *len, uint wrap);

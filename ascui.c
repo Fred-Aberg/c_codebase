@@ -2,6 +2,7 @@
 #include "assert.h"
 #include "stdio.h"
 #include "string.h"
+#include "common.h"
 
 #define SIZE_INCREASE_ON_REALLOC 4
 
@@ -17,6 +18,7 @@ static void array_make_contiguos(void **array, uint len)
     }
 }
 
+/// NOTE: Only works with arrays of addresses
 static void **array_realloc(void **array_ptr, uint current_len, uint increase)
 {
     uint new_len = current_len + increase;
@@ -70,40 +72,8 @@ void draw_box(Pos_t pos, uint width, uint length, UIBoxStyle_t style)
     tl_draw_tile(pos.x, length_coord, style.corner_smbl, style.border_col, style.char_col, NULL);
 }
 
-uint *ui_element_get_length_profile(UIElement_t **ui_elements, uint num_elements, uint max_width)
-{
-    uint *length_profile = calloc(num_elements, sizeof(uint));
-    uint c_len = 0;
 
-    UIElement_t c_ui_element;
-    // printf("\nLength of elements:");
-    for (size_t i = 0; i < num_elements; i++)
-    {
-        c_len = 1;
-        c_ui_element = *(ui_elements[i]);
-
-
-        uint x = 0;
-        for (size_t j = 0; j < c_ui_element.text_len; j++)
-        {
-            if (c_ui_element.text[j] == '\n')
-            {
-                c_len++;
-                x = 0;
-                continue;
-            }
-            x++;
-            
-            if(x % max_width == 0) {c_len++; x = 0;}
-        }
-        
-        length_profile[i] = c_len; // len = #rows + #linebrakes
-        // printf("\n    %ld: %d", i, c_len);
-    }
-    
-
-    return length_profile;
-}
+char *ascui_wrap_str(char *str, uint *calc_rows, uint *len, uint wrap);
 
 bool *ui_element_scheduler(UIBox_t *ui_box)
 {
@@ -325,7 +295,7 @@ void ascui_ui_box_set_ngbrs(UIBox_t *ui_box,
     ui_box->e_ngbr = e_ngbr;
 }
 
-void ascui_ui_box_add_element(UIBox_t *ui_box, UIElement_t *ui_element)
+void ascui_ui_box_add_element(UIBox_t *ui_box, UIElement_t *ui_element, bool text_allocated)
 {
     // Reallocate to fit more elements if full
     if (ui_box->num_elements + 1 >= ui_box->element_capacity)
@@ -340,6 +310,17 @@ void ascui_ui_box_add_element(UIBox_t *ui_box, UIElement_t *ui_element)
     // We do not want to overwrite anything in this stage, if we are
     // then something is wrong --> crash
     assert(*new_ui_element_slot == NULL);
+
+	// Sanitize new element
+	if(ui_element->type == UI_TEXT)
+	{
+		char *old_txt = ui_element->text; 
+	
+		ui_element->text = ascui_wrap_str(ui_element->text, &(ui_element->rows_required), &(ui_element->text_len), ui_box->width-2);
+
+		if(text_allocated)
+			free(old_txt);
+	}
 
     *new_ui_element_slot = ui_element;
     ui_box->num_elements++;
@@ -374,6 +355,7 @@ UIElement_t *ascui_ui_element_create(UIElemenType_e type,
     UIElement_t *ui_element = calloc(1, sizeof(UIElement_t));
     ui_element->type = type;
     ui_element->type_data = type_data;
+    ui_element->side_effect_func = side_effect_func;
     ui_element->text_len = strlen(text);
     ui_element->text = calloc(ui_element->text_len + 1, sizeof(char));
     memcpy(ui_element->text, text, ui_element->text_len + 1);
@@ -401,76 +383,75 @@ void ascui_ui_element_set_style(UIElement_t *ui_element, Color bg_col, Color cha
 
 bool is_word_char(char c)
 {
-    return (c != ' ' && c != '\n');
+	return (c != ' ' && c != '\n');
 }
 
-uint ascui_ui_element_calc_rows(uint wrap, char *text, uint len)
+// Allocates, modifies calc_rows & len
+char *ascui_wrap_str(char *str, uint *calc_rows, uint *len, uint wrap)
 {
-    uint current_line_len = 0;
-    uint row_count = 1;
+	assert(wrap > 2); // Fuck off, no tiny texts. 2 hard 2 code.
 
-    size_t j = 0;
-    for (size_t i = 0; i < len && text[i] != '\0'; i++)
-    {
-        if(text[i] == '\n') {row_count++; current_line_len = 0; continue;}
+	char *wrapped_str = calloc(*len * 3, sizeof(char)); // len*3 is the maximum theoretical increase in size
+	uint wrapped_index_offset = 0; // As new characters are inserted the indexes of 'str' and 'wrapped_str' diverge
 
-        // New word found
-        if (is_word_char(text[i])) 
-        {
+	uint c_line_len = 0;
+	uint num_rows = 1;
 
-            // Count up to 'j' until end of word, j is the length of the word
-            for (j = i; j < len; j++)
-                if (!is_word_char(text[i+j])) break;
+	for(size_t i = 0; i < *len; i++)
+	{
+		if(str[i] == '\n')
+		{
+			wrapped_str[i + wrapped_index_offset] = '\n';
+			num_rows++;
+			c_line_len = 0;
+			continue;
+		}
+	
+		// Determine if we need to wrap, also how we should wrap 
+		if(c_line_len >= wrap - 1) 	// WRAP
+		{
+			bool pre_char = is_word_char(str[i - 1]);
+			bool this_char = is_word_char(str[i]);
+			bool post_char = is_word_char(str[i + 1]);
 
+			if(!this_char || (this_char && !post_char)) 	
+			{
+				// PUT CHAR THEN BREAK LINE
+				wrapped_str[i + wrapped_index_offset] = str[i];	
+				wrapped_str[i + wrapped_index_offset + 1] = '\n';
+				wrapped_index_offset++;
+			}
+			else if(pre_char)								
+			{
+				// SPLIT: PUT '-' THEN BREAK LINE, MOVE BACK i
+				wrapped_str[i + wrapped_index_offset] = '-';	
+				wrapped_str[i + wrapped_index_offset + 1] = '\n';
+				wrapped_index_offset += 2;	
+				i--; 						
+			}
+			else if(!pre_char)								
+			{
+				// MOVE: BREAK LINE, MOVE BACK i
+				wrapped_str[i + wrapped_index_offset] = '\n'; 
+				wrapped_index_offset++;
+				i--; 			
+			}
+			else											
+				// KYS
+				assert(0); 
+				
+			num_rows++;
+			c_line_len = 0;	
+		}
+		else						// PUT CHAR 
+		{
+			wrapped_str[i + wrapped_index_offset] = str[i];
+			c_line_len++;			
+		}
+	}
 
-            int overflow = current_line_len + j - wrap;
-            printf("\n\nNew word found [%ld] OF: %d\n   \"%s\"", j, overflow, text + i);
-            // i = word start
-            // i+j = word end
-            // current_line_len+j = word length
-            // overflow = number of chars above wrap
-
-            // No overflow, simply continue
-            if (overflow <= 0)
-            {
-                i += j;
-                current_line_len += j;
-            }
-            // Overflow, either move or split
-            else if (overflow > 0)
-            {
-                uint wb = wrap - (j - overflow);
-
-                // Split
-                if (wb > 2)
-                {
-                    row_count++;
-                    current_line_len = 0;
-                    i += overflow + 1; // + 1 since the last of 'wb' is set to '-' 
-                }
-                else // Move
-                {
-                    row_count++;
-                    current_line_len = j; // new line begins with the word
-                }
-            }
-        }
-        else // Non-word character
-        {
-            current_line_len++;
-        }
-        
-        if (current_line_len >= wrap)
-        {
-            row_count++;
-            current_line_len = 0;
-        }
-    }
+	*calc_rows = num_rows;
+	return wrapped_str;
 }
 
 
-
-void tl_draw_text_prose(uint x, uint y, uint wrap, char *text, uint len, Color char_col, Color bg_col, Font *font, uint word_mode, uint align_mode)
-{
-
-}

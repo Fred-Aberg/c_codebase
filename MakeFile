@@ -1,7 +1,0 @@
-main: main.c
-	gcc main.c minesweeper.c raytiles.c -g -lc -lm -lraylib -I /usr/local/include -o minesweeper
-# clean:
-# 	rm -f *.o main
-
-# mem: main.o 
-# 	valgrind --leak-check=full ./output

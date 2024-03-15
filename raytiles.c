@@ -164,7 +164,7 @@ void tl_draw_line(uint x0, uint y0, uint x1, uint y1, char smbl, Color char_col,
     }
 }
 
-
+// wrap = 0 => no wrapping
 uint tl_draw_text(uint x, uint y, uint wrap, char *text, uint len, Color char_col, Color bg_col, Font *font)
 {
     uint _x = x;
@@ -177,15 +177,15 @@ uint tl_draw_text(uint x, uint y, uint wrap, char *text, uint len, Color char_co
 
         // Wrap around to start of x, on new line (y) and continue
         _x++;
-        if (_x >= wrap || text[i] == '\n') {_x = x; _y++;}
+        if ((_x >= wrap && wrap != 0) || text[i] == '\n') {_x = x; _y++;}
     }
 
     return _y - y + 1; // Rows written
 }
 
-Vector2 tl_get_grid_coords(Vector2 xy)
+Pos_t tl_get_grid_coords(Pos_t xy)
 {
-    return (Vector2){xy.x / GRID->tile_size_x, xy.y / GRID->tile_size_y};
+    return pos(xy.x / GRID->tile_size_x, xy.y / GRID->tile_size_y);
 }
 
 void tl_set_tile_bg(uint x, uint y, Color bg_col)

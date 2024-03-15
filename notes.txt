@@ -1,0 +1,23 @@
+/// TODO ///
+-	Boxes
+	o	Finnish element text rendering
+	-	Properly design and implement the cursor's interaction with boxes
+	-	Properly design and implement buttons and their side effect system
+	-	... toggle, slider and input field 
+
+
+
+/// DEMO TIMELINE ///
+- 	COQ-like inventory manager with trading.
+	-	Item interaction/manipulation
+		-	Moving items between storage
+		-	Retrieve info about item
+		-	Drop/remove item
+	-	Switching between character screens
+		-	Inventory
+		-	'Stats'
+		-	Etc.
+-	Raytiles rework
+	-	Enable the existence of several grids
+	-	Subgrids: grids that can be rendered in/ontop of another grid, possibly at another scale
+		-	Will enable better gameplay-UI distinction and zooming into the game-world without disturbing the UI

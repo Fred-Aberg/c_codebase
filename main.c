@@ -5,6 +5,7 @@
 #include "minesweeper.h"
 #include "raytiles.h"
 #include "string.h"
+#include "common.h"
 
 const int SCREENSIZE_X = 1000;
 const int SCREENSIZE_Y = 650;
@@ -13,13 +14,7 @@ const int APP_RES_X = GAME_RES_X + 1; // two border lines, _Y is calculated
 const int UI_HEIGHT = 3;
 const int APP_X_SIZE = APP_RES_X + 1;
 
-
-
 #define DEF_COLOR (Color){20, 40, 29, 255}
-
-#define MIN(a, b) (a < b)? a : b
-#define MAX(a, b) (a < b)? b : a
-
 
 typedef struct Cursor 
 {
@@ -30,21 +25,6 @@ typedef struct Cursor
     uint x_l_bnds;
     uint x_h_bnds;
 } Cursor_t;
-
-uint min(uint a, uint b)
-{
-    return (a < b)? a : b;
-}
-
-uint max(uint a, uint b)
-{
-    return (a > b)? a : b;
-}
-
-uint clamp (uint low, uint x, uint high)
-{
-    return min(max(low, x), high);
-}
 
 void clamp_cursor(Cursor_t *crs)
 {

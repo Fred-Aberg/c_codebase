@@ -4,38 +4,6 @@
 #include "string.h"
 #include "common.h"
 
-#define SIZE_INCREASE_ON_REALLOC 4
-
-static void array_make_contiguos(void **array, uint len)
-{
-    uint gaps = 0;
-    for (size_t i = 0; i < len; i++)
-    {
-        if (array[i] == NULL) {gaps++; continue;}
-
-        array[i - gaps] = array[i];
-        array[i] = NULL;
-    }
-}
-
-/// NOTE: Only works with arrays of addresses
-static void **array_realloc(void **array_ptr, uint current_len, uint increase)
-{
-    uint new_len = current_len + increase;
-    array_ptr = realloc(array_ptr, new_len * sizeof(void *));
-
-    /// The realloc can fail, TODO: better handling of error than crashing
-    if(array_ptr == NULL) 
-    {
-        printf("\nERROR:\n    Could not reallocate array!");
-        assert(false); // GG
-    }
-
-    // NULL all new adresses
-    for (size_t i = current_len; i < new_len; i++) array_ptr[i] = NULL;   
-    return array_ptr;    
-}
-
 UIContext_t *ascui_context_create()
 {
     UIContext_t * ui_cntxt = calloc(1, sizeof(UIContext_t));

@@ -13,6 +13,10 @@
 # 	valgrind --leak-check=full ./output
 
 #gcc tl_test.c raytiles.c -g -lc -lm -lraylib -I /usr/local/include -o main
+_tl_test:
+	gcc src/tl_test.c src/raytiles.c -g -lc -lm -lraylib -I /usr/local/include -o bin/main
+tl_test: _tl_test
+	./bin/main 
 
 CC=gcc
 CFLAGS= -Wall -g -lc -lm -lraylib -I /usr/local/include

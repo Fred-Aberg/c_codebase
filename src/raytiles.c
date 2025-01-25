@@ -5,134 +5,121 @@
 #include "assert.h"
 #include "string.h"
 
-typedef struct
-{
-    Color bg_col;
-    Color char_col;
-    char symbol;
-    Font *font;
-}Tile_t;
-
-typedef struct
-{
-    int scr_size_x;
-    int scr_size_y;
-    uint resolution_x;
-    uint resolution_y;
-    int tile_size_x;
-    int tile_size_y;
-    Color default_col;
-    Font *default_font;
-
-    Tile_t *tiles;
-} Grid_t;
-
-// Global address 
-Grid_t *GRID = NULL;
-#define X_RES GRID->resolution_x
-#define Y_RES GRID->resolution_y
-#define X_TL_SIZE GRID->tile_size_x
-#define Y_TL_SIZE GRID->tile_size_y
-#define FONT_SIZE GRID->tile_size_x * 1.2f
-#define SIZE X_RES * Y_RES
-
 #define MIN(a, b) (a < b)? a : b
+#define grid_width(grid) ((grid->on_scr_size_x - grid->offset_x) / grid->tile_width)
+#define grid_height(grid) ((grid->on_scr_size_y - grid->offset_y) / grid->tile_height)
+#define grid_size(grid) (grid_width(grid) * grid_height(grid))
 
-Tile_t *get_tile(uint x, uint y)
+Tile_t *get_tile(Grid_t *grid, uint x, uint y)
 {
-    assert(x < X_RES && y < Y_RES); // kys
-    printf("RAYTILES: get tile overflow");
-    return &GRID->tiles[x + y * X_RES];
+	if(x >= grid_width(grid) && y >= grid_height(grid))
+	{
+    fprintf(stderr, "RAYTILES: get tile overflow (x,y)=(%u, %u) [w,h]=[%u, %u] i=%d\n", 
+    		x, y, grid_width(grid), grid_height(grid), x + y * grid_width(grid));
+    assert(false); // kys	
+	}
+    return &grid->tiles[x + y * grid_width(grid)];
 }
 
 // Convert array index of cell to cell's coordinates
-static void i_to_pos(int i, uint *x, uint *y)
+static Pos_t i_to_pos(Grid_t *grid, int i)
 {
-    *y = i / X_RES; // C autimatically "floors" the result 
-    *x = i - (*y * X_RES);
+    uint y = i / grid_width(grid); // C autimatically floors the result
+    uint x = i - (y * grid_width(grid));
+	return (Pos_t){.x = x, .y = y};
 }
 
-uint tl_init_grid(uint res_x, int scr_size_x, int scr_size_y, Color def_col, Font *def_font)
+Grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_size_y, 
+					uint tile_width, uint tile_height, Color def_col, Font *def_font)
 {
-    GRID = calloc(1, sizeof(Grid_t));
+    Grid_t *grid = calloc(1, sizeof(Grid_t));
 
-    GRID->scr_size_x = scr_size_x;
-    GRID->scr_size_y = scr_size_y;
-    GRID->resolution_x = res_x;
-    GRID->default_col = def_col;
-    GRID->default_font = def_font;
-    GRID->tile_size_x = scr_size_x / res_x;
-    GRID->tile_size_y = (scr_size_x / res_x) * 1.2f;
+    grid->offset_x = offset_x;
+    grid->offset_y = offset_y;
+    grid->on_scr_size_x = on_scr_size_x;
+    grid->on_scr_size_y = on_scr_size_y;
+	grid->tile_width = tile_width;
+	grid->tile_height = tile_height;
+    grid->default_col = def_col;
+    grid->default_font = def_font;
 
-    // Calculate allowed res_y based on scr_size_y
-    GRID->resolution_y = floor(scr_size_y / GRID->tile_size_y);
+    grid->tiles = calloc(grid_size(grid), sizeof(Tile_t));
 
-    GRID->tiles = calloc(X_RES * Y_RES, sizeof(Tile_t));
-
-    printf("tl_grid initialized:\n    size: %d x %d -> %d tiles\n    coords: (0-%d, 0-%d)", X_RES, Y_RES, SIZE, X_RES - 1, Y_RES - 1);
+    fprintf(stderr, "tl_grid initialized - size: %d x %d -> %d tiles - coords: (0-%d, 0-%d)\n", 
+    		grid_width(grid), grid_height(grid), grid_size(grid), 
+    		grid_width(grid) - 1, grid_height(grid) - 1);
     
-    return Y_RES;
+    return grid;
 }
 
-Pos_t tl_grid_get_size()
+Pos_t tl_grid_get_size(Grid_t *grid)
 {
-    return (Pos_t){.x = X_RES, .y = Y_RES};
+    return (Pos_t){.x = grid_width(grid), .y = grid_height(grid)};
 }
 
-void tl_deinit_grid()
+void tl_deinit_grid(Grid_t *grid)
 {
-    free(GRID->tiles);
-    free(GRID);
-    GRID = NULL;
+    free(grid->tiles);
+    free(grid);
 }
 
-void tl_render_grid()
+void tl_render_grid(Grid_t *grid)
 {
-    uint x = 0;
-    uint y = 0;
+    Pos_t pos;
     Tile_t tile;
     Font *tile_font;
-    for (uint i = 0; i < SIZE; i++)
-    {
-            tile = GRID->tiles[i];
-            i_to_pos(i, &x, &y);
 
-            if (tile.bg_col.a != 0) DrawRectangle(x * X_TL_SIZE, y * Y_TL_SIZE, X_TL_SIZE, Y_TL_SIZE, tile.bg_col);
-            else                    DrawRectangle(x * X_TL_SIZE, y * Y_TL_SIZE, X_TL_SIZE, Y_TL_SIZE, GRID->default_col);
+    for (uint i = 0; i < grid_size(grid); i++)
+    {
+            tile = grid->tiles[i];
+            pos = i_to_pos(grid, i);
+
+			DrawRectangle(grid->offset_x + pos.x * grid->tile_width, grid->offset_y + pos.y * grid->tile_height,
+						 grid->tile_width, grid->tile_height, tile.bg_col);
+            // if (tile.bg_col.a != 0) DrawRectangle(x * X_TL_SIZE, y * Y_TL_SIZE, X_TL_SIZE, Y_TL_SIZE, tile.bg_col);
+            // else                    DrawRectangle(x * X_TL_SIZE, y * Y_TL_SIZE, X_TL_SIZE, Y_TL_SIZE, GRID->default_col);
 
             if (tile.symbol != 0 && tile.char_col.a != 0)
             {
-                tile_font = (tile.font != NULL)? tile.font : GRID->default_font;
-                DrawTextCodepoint(*tile_font, tile.symbol, (Vector2){x * X_TL_SIZE, y * Y_TL_SIZE}, FONT_SIZE, tile.char_col);
+                tile_font = (tile.font != NULL)? tile.font : grid->default_font;
+                DrawTextCodepoint(*tile_font, tile.symbol, (Vector2){grid->offset_x + pos.x * grid->tile_width, 
+                					grid->offset_y + pos.y * grid->tile_height}, grid->tile_width, tile.char_col);
             }
-
     }
 }
 
-void tl_draw_tile(uint x, uint y, char symbol, Color char_col, Color bg_col, Font *font)
+void tl_resize_grid(Grid_t *grid, int new_scr_size_x, int new_scr_size_y)
 {
-    Tile_t *tile = get_tile(x, y);
+	Grid_t *new_grid = tl_init_grid(grid->offset_x, grid->offset_y, new_scr_size_x, new_scr_size_y,
+									grid->tile_width, grid->tile_height, grid->default_col, grid->default_font);
+	tl_deinit_grid(grid);
+	grid = new_grid;
+}
+
+void tl_draw_tile(Grid_t *grid, uint x, uint y, char symbol, Color char_col, Color bg_col, Font *font)
+{
+    Tile_t *tile = get_tile(grid, x, y);
     tile->bg_col = bg_col;
     tile->char_col = char_col;
     tile->symbol = symbol;
     tile->font = font;
 }
 
-void tl_draw_rect(uint x0, uint y0, uint width, uint height, char symbol, Color char_col, Color bg_col, Font *font)
+void tl_draw_rect(Grid_t *grid, uint x0, uint y0, uint width, uint height, char symbol, Color char_col, Color bg_col, Font *font)
 {
     for (uint _x = x0; _x <= x0 + width; _x++)
     {
         for (uint _y = y0; _y <= y0 + height; _y++)
         {
-            tl_draw_tile(_x, _y, symbol, char_col, bg_col, font);
+            tl_draw_tile(grid, _x, _y, symbol, char_col, bg_col, font);
         }
     }
 }
 
-void tl_draw_line(uint x0, uint y0, uint x1, uint y1, char symbol, Color char_col, Color bg_col, Font *font)
+void tl_draw_line(Grid_t *grid, uint x0, uint y0, uint x1, uint y1, char symbol, Color char_col, Color bg_col, Font *font)
 {
     // https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
-    int dx = abs(x1 - x0);
+    int dx = abs(x1 - x0);			// Don't believe the linter's lies, the abs() are needed!
     int sx = (x0 < x1)? 1 : -1;
     int dy = -abs(y1 - y0);
     int sy = (y0 < y1)? 1 : -1;
@@ -140,7 +127,7 @@ void tl_draw_line(uint x0, uint y0, uint x1, uint y1, char symbol, Color char_co
     
     while (true)
     {
-        tl_draw_tile(x0, y0, symbol, char_col, bg_col, font);
+        tl_draw_tile(grid, x0, y0, symbol, char_col, bg_col, font);
 
         if (x0 == x1 && y0 == y1) break;
         
@@ -162,7 +149,7 @@ void tl_draw_line(uint x0, uint y0, uint x1, uint y1, char symbol, Color char_co
 }
 
 // wrap = 0 => no wrapping
-uint tl_draw_text(uint x, uint y, uint wrap, char *text, uint len, Color char_col, Color bg_col, Font *font)
+uint tl_draw_text(Grid_t * grid, uint x, uint y, uint wrap, char *text, uint len, Color char_col, Color bg_col, Font *font)
 {
     uint _x = x;
     uint _y = y;
@@ -170,7 +157,7 @@ uint tl_draw_text(uint x, uint y, uint wrap, char *text, uint len, Color char_co
     for (uint i = 0; i < len; i++)
     {
         if(text[i] != '\n')
-            tl_draw_tile(_x, _y, text[i], char_col, bg_col, font);
+            tl_draw_tile(grid, _x, _y, text[i], char_col, bg_col, font);
 
         _x++;
 
@@ -181,13 +168,13 @@ uint tl_draw_text(uint x, uint y, uint wrap, char *text, uint len, Color char_co
     return _y - y + 1; // Rows written
 }
 
-Pos_t tl_get_grid_coords(Pos_t xy)
+Pos_t tl_screen_to_grid_coords(Grid_t *grid, Pos_t xy)
 {
-    return pos(xy.x / GRID->tile_size_x, xy.y / GRID->tile_size_y);
+    return pos((xy.x - grid->offset_x) / grid->tile_width, (xy.y - grid->offset_y) / grid->tile_height);
 }
 
-void tl_set_tile_bg(uint x, uint y, Color bg_col)
+void tl_set_tile_bg(Grid_t *grid, uint x, uint y, Color bg_col)
 {
-    Tile_t *tile = get_tile(x, y);
+    Tile_t *tile = get_tile(grid, x, y);
     tile->bg_col = bg_col;
 }

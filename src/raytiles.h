@@ -37,7 +37,9 @@ Pos_t tl_grid_get_size(Grid_t *grid);
 
 void tl_render_grid(Grid_t *grid);
 
-void tl_resize_grid(Grid_t *grid, int new_scr_size_x, int new_scr_size_y);
+void tl_resize_grid(Grid_t **grid, int new_offset_x, int new_offset_y, int new_scr_size_x, int new_scr_size_y, uint new_tile_width, uint new_tile_height);
+
+void tl_fit_subgrid(Grid_t *top_grid, Grid_t **sub_grid, uint x0, uint y0, uint x1, uint y1);
 
 void tl_draw_tile(Grid_t *grid, uint x, uint y, char symbol, Color char_col, Color bg_col, Font *font);
 

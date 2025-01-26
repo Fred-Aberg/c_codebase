@@ -6,8 +6,8 @@
 #include "string.h"
 
 #define MIN(a, b) (a < b)? a : b
-#define grid_width(grid) ((grid->on_scr_size_x - grid->offset_x) / grid->tile_width)
-#define grid_height(grid) ((grid->on_scr_size_y - grid->offset_y) / grid->tile_height)
+#define grid_width(grid) ((grid->on_scr_size_x) / grid->tile_width)
+#define grid_height(grid) ((grid->on_scr_size_y) / grid->tile_height)
 #define grid_size(grid) (grid_width(grid) * grid_height(grid))
 
 Tile_t *get_tile(Grid_t *grid, uint x, uint y)
@@ -81,19 +81,33 @@ void tl_render_grid(Grid_t *grid)
 
             if (tile.symbol != 0 && tile.char_col.a != 0)
             {
+            	int txt_padding = grid->tile_width * 0.15f; // 15% padding
                 tile_font = (tile.font != NULL)? tile.font : grid->default_font;
-                DrawTextCodepoint(*tile_font, tile.symbol, (Vector2){grid->offset_x + pos.x * grid->tile_width, 
+                DrawTextCodepoint(*tile_font, tile.symbol, (Vector2){txt_padding + grid->offset_x + pos.x * grid->tile_width, 
                 					grid->offset_y + pos.y * grid->tile_height}, grid->tile_width, tile.char_col);
             }
     }
 }
 
-void tl_resize_grid(Grid_t *grid, int new_scr_size_x, int new_scr_size_y)
+void tl_resize_grid(Grid_t **grid, int new_offset_x, int new_offset_y, int new_scr_size_x, int new_scr_size_y, uint new_tile_width, uint new_tile_height)
 {
-	Grid_t *new_grid = tl_init_grid(grid->offset_x, grid->offset_y, new_scr_size_x, new_scr_size_y,
-									grid->tile_width, grid->tile_height, grid->default_col, grid->default_font);
-	tl_deinit_grid(grid);
-	grid = new_grid;
+	Grid_t *old_grid = *grid;
+	Grid_t *new_grid = tl_init_grid(new_offset_x, new_offset_y, new_scr_size_x, new_scr_size_y,
+									new_tile_width, new_tile_height, old_grid->default_col, old_grid->default_font);
+	tl_deinit_grid(*grid);
+	*grid = new_grid;
+}
+
+
+// x0 < x1
+// x1 <= top grid width
+void tl_fit_subgrid(Grid_t *top_grid, Grid_t **sub_grid, uint x0, uint y0, uint x1, uint y1)
+{
+	int new_offset_x = x0 * top_grid->tile_width + top_grid->offset_x;
+	int new_offset_y = y0 * top_grid->tile_height + top_grid->offset_y;
+	int new_scr_size_x = (x1-x0) * top_grid->tile_width;
+	int new_scr_size_y = (y1-y0) * top_grid->tile_height;
+	tl_resize_grid(sub_grid, new_offset_x, new_offset_y, new_scr_size_x, new_scr_size_y, (*sub_grid)->tile_width, (*sub_grid)->tile_height);
 }
 
 void tl_draw_tile(Grid_t *grid, uint x, uint y, char symbol, Color char_col, Color bg_col, Font *font)

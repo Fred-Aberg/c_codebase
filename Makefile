@@ -14,9 +14,14 @@
 
 #gcc tl_test.c raytiles.c -g -lc -lm -lraylib -I /usr/local/include -o main
 _tl_test:
-	gcc src/tl_test.c src/raytiles.c src/common.c -g -lc -lm -lraylib -I /usr/local/include -o bin/main
+	gcc src/tl_test.c src/raytiles.c src/common.c -g -lc -lm -lraylib -I /usr/local/include -o bin/tl_test
 tl_test: _tl_test
-	./bin/main 
+	./bin/tl_test
+
+_ascui_test:
+	gcc src/ascui_test.c src/ascui.c src/raytiles.c src/common.c -g -lc -lm -lraylib -I /usr/local/include -o bin/ascui_test
+ascui_test: _ascui_test
+	./bin/ascui_test
 
 CC=gcc
 CFLAGS= -Wall -g -lc -lm -lraylib -I /usr/local/include

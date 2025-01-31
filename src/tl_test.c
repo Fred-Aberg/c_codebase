@@ -1,6 +1,7 @@
 #include <raylib.h>
 #include "raytiles.h"
 #include "common.h"
+#include "ascui.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -45,6 +46,7 @@ int main(){
     HideCursor();
     SetWindowMinSize(200, 200);
 
+	// Main Grid
 	Grid_t *main_grid = tl_init_grid(0, 0, screensize_x, screensize_y, tile_width, tile_height, DEF_COLOR, &square_font);
 
 	// Subgrid
@@ -85,7 +87,6 @@ int main(){
 		{
 			screensize_x = GetScreenWidth();
 			screensize_y = GetScreenHeight();
-			
 			
 			tl_resize_grid(&main_grid, 0, 0, screensize_x, screensize_y, tile_width, tile_height);
 

@@ -25,9 +25,9 @@ int main(){
    	{
    		// Defaults
    		screensize_x = 1000;
-   		screensize_y = 1000;
-   		tile_width = 100;
-   		tile_height = 100;
+   		screensize_y = 500;
+   		tile_width = 50;
+   		tile_height = 50;
    	}
    	else
    	{
@@ -64,18 +64,27 @@ int main(){
 	// UI
 	Container_style_t style1 = style(c(20,5,10), c(80, 20, 40), c(200, 50, 100), '=', '|', '+');
 	Container_style_t style2 = style(c(10,50,10), c(40, 60, 40), c(20, 255, 20), '~', 'I', 'O');
-	Container_t top_container = ascui_create_container(true, PERCENTAGE, 100, false, VERTICAL, 4);
+	Container_t top_container = ascui_create_container(true, PERCENTAGE, 100, false, VERTICAL, 2);
 	// Container_t top_box = ascui_create_box(true, PERCENTAGE, 100, false, VERTICAL, 0, style);
 
 	
-	ascui_set_nth_subcontainer(top_container, 0, ascui_create_box(true, PERCENTAGE, 25, false, HORIZONTAL, 0, style2));
-	ascui_set_nth_subcontainer(top_container, 1, ascui_create_box(true, PERCENTAGE, 25, false, HORIZONTAL, 0, style1));
-	ascui_set_nth_subcontainer(top_container, 2, ascui_create_box(true, PERCENTAGE, 25, false, HORIZONTAL, 0, style2));
-	ascui_set_nth_subcontainer(top_container, 3, ascui_create_box(true, PERCENTAGE, 25, false, HORIZONTAL, 0, style1));
+	ascui_set_nth_subcontainer(top_container, 0, ascui_create_box(true, PERCENTAGE, 25, false, HORIZONTAL, 2, style2));
+	ascui_set_nth_subcontainer(top_container, 1, ascui_create_container(true, PERCENTAGE, 75, false, HORIZONTAL, 2));
 
-	// Container_t *first_box = ascui_get_nth_subcontainer(top_container, 0);
-	// ascui_set_nth_subcontainer(*first_box, 0, ascui_create_box(true, PERCENTAGE, 50, false, VERTICAL, 0, style1));
-	// ascui_set_nth_subcontainer(*first_box, 1, ascui_create_box(true, PERCENTAGE, 50, false, VERTICAL, 0, style2));
+	Container_t *first_box = ascui_get_nth_subcontainer(top_container, 0);
+	ascui_set_nth_subcontainer(*first_box, 0, ascui_create_box(true, PERCENTAGE, 20, false, HORIZONTAL, 0, style1));
+	ascui_set_nth_subcontainer(*first_box, 1, ascui_create_box(true, PERCENTAGE, 20, false, HORIZONTAL, 0, style1));
+	
+	Container_t *second_container = ascui_get_nth_subcontainer(top_container, 1);
+	ascui_set_nth_subcontainer(*second_container, 0, ascui_create_container(true, PERCENTAGE, 25, false, VERTICAL, 2));
+	ascui_set_nth_subcontainer(*second_container, 1, ascui_create_container(true, PERCENTAGE, 75, false, VERTICAL, 2));
+
+	Container_t *left_container = ascui_get_nth_subcontainer(*second_container, 0);
+	ascui_set_nth_subcontainer(*left_container, 0, ascui_create_box(true, PERCENTAGE, 50, false, HORIZONTAL, 0, style1));
+	ascui_set_nth_subcontainer(*left_container, 1, ascui_create_box(true, PERCENTAGE, 50, false, HORIZONTAL, 0, style2));
+	Container_t *right_container = ascui_get_nth_subcontainer(*second_container, 1);
+	ascui_set_nth_subcontainer(*right_container, 0, ascui_create_box(true, PERCENTAGE, 50, false, HORIZONTAL, 0, style2));
+	ascui_set_nth_subcontainer(*right_container, 1, ascui_create_box(true, PERCENTAGE, 50, false, HORIZONTAL, 0, style1));
 	
     while (!WindowShouldClose()){
 		Vector2 mouse_scr_pos = (Vector2){GetMouseX(), GetMouseY()};
@@ -109,13 +118,9 @@ int main(){
 
 		char buf[50];
 		sprintf(buf, "(%u, %u)", mouse_grid_pos.x, mouse_grid_pos.y);
-		DrawText(buf, 0, 0, 24, WHITE);
-        
-		sprintf(buf, "%f", scroll);
-		DrawText(buf, 0, 32, 24, WHITE);
-
+		DrawText(buf, 0, 0, 24, c(200, 0, 200));
 		
-        DrawFPS(0,64);
+        DrawFPS(0,28);
         EndDrawing();
     }
     UnloadFont(square_font);

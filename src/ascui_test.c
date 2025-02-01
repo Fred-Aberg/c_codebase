@@ -64,27 +64,30 @@ int main(){
 	// UI
 	Container_style_t style1 = style(c(20,5,10), c(80, 20, 40), c(200, 50, 100), '=', '|', '+');
 	Container_style_t style2 = style(c(10,50,10), c(40, 60, 40), c(20, 255, 20), '~', 'I', 'O');
-	Container_t top_container = ascui_create_container(true, PERCENTAGE, 100, false, VERTICAL, 2);
+	Container_t top_container = ascui_create_container(true, PERCENTAGE, 100, VERTICAL, 2);
 	// Container_t top_box = ascui_create_box(true, PERCENTAGE, 100, false, VERTICAL, 0, style);
 
 	
-	ascui_set_nth_subcontainer(top_container, 0, ascui_create_box(true, PERCENTAGE, 25, false, HORIZONTAL, 2, style2));
-	ascui_set_nth_subcontainer(top_container, 1, ascui_create_container(true, PERCENTAGE, 75, false, HORIZONTAL, 2));
+	ascui_set_nth_subcontainer(top_container, 0, ascui_create_box(true, PERCENTAGE, 50, VERTICAL, 2, style2));
+	ascui_set_nth_subcontainer(top_container, 1, ascui_create_container(true, PERCENTAGE, 50, HORIZONTAL, 2));
 
 	Container_t *first_box = ascui_get_nth_subcontainer(top_container, 0);
-	ascui_set_nth_subcontainer(*first_box, 0, ascui_create_box(true, PERCENTAGE, 20, false, HORIZONTAL, 0, style1));
-	ascui_set_nth_subcontainer(*first_box, 1, ascui_create_box(true, PERCENTAGE, 20, false, HORIZONTAL, 0, style1));
+	ascui_set_nth_subcontainer(*first_box, 0, ascui_create_box(true, PERCENTAGE, 10, HORIZONTAL, 0, style1));
+	char *txt = "I like to creep around my home and act like a goblin\n\nI don’t know why but I just enjoy doing this. Maybe it’s my way of dealing with stress or something but I just do it about once every week. Generally I’ll carry around a sack and creep around in a sort of crouch-walking position making goblin noises, then I’ll walk around my house and pick up various different “trinkets” and put them in my bag while saying stuff like “I’ll be having that” and laughing maniacally in my goblin voice (“trinkets” can include anything from shit I find on the ground to cutlery or other utensils). The other day I was talking with my neighbours and they mentioned hearing weird noises like what I wrote about and I was just internally screaming the entire conversation. I’m 99% sure they don’t know it’s me but god that 1% chance is seriously weighing on my mind.";
+	
+	ascui_set_nth_subcontainer(*first_box, 1, ascui_create_text(true, PERCENTAGE, 90, strlen(txt), txt, c(0,200,0), c(30,60,30)));
 	
 	Container_t *second_container = ascui_get_nth_subcontainer(top_container, 1);
-	ascui_set_nth_subcontainer(*second_container, 0, ascui_create_container(true, PERCENTAGE, 25, false, VERTICAL, 2));
-	ascui_set_nth_subcontainer(*second_container, 1, ascui_create_container(true, PERCENTAGE, 75, false, VERTICAL, 2));
+	ascui_set_nth_subcontainer(*second_container, 0, ascui_create_container(true, PERCENTAGE, 25, VERTICAL, 2));
+	ascui_set_nth_subcontainer(*second_container, 1, ascui_create_container(true, PERCENTAGE, 75, VERTICAL, 1));
 
 	Container_t *left_container = ascui_get_nth_subcontainer(*second_container, 0);
-	ascui_set_nth_subcontainer(*left_container, 0, ascui_create_box(true, PERCENTAGE, 50, false, HORIZONTAL, 0, style1));
-	ascui_set_nth_subcontainer(*left_container, 1, ascui_create_box(true, PERCENTAGE, 50, false, HORIZONTAL, 0, style2));
+	ascui_set_nth_subcontainer(*left_container, 0, ascui_create_box(true, PERCENTAGE, 50, HORIZONTAL, 0, style1));
+	ascui_set_nth_subcontainer(*left_container, 1, ascui_create_box(true, PERCENTAGE, 50, HORIZONTAL, 0, style2));
 	Container_t *right_container = ascui_get_nth_subcontainer(*second_container, 1);
-	ascui_set_nth_subcontainer(*right_container, 0, ascui_create_box(true, PERCENTAGE, 50, false, HORIZONTAL, 0, style2));
-	ascui_set_nth_subcontainer(*right_container, 1, ascui_create_box(true, PERCENTAGE, 50, false, HORIZONTAL, 0, style1));
+	ascui_set_nth_subcontainer(*right_container, 0, ascui_create_subgrid(true, PERCENTAGE, 100, NULL, main_grid->default_col, main_grid->default_font));
+
+	Cursor_t cursor; 
 	
     while (!WindowShouldClose()){
 		Vector2 mouse_scr_pos = (Vector2){GetMouseX(), GetMouseY()};
@@ -92,13 +95,19 @@ int main(){
         BeginDrawing();
         ClearBackground(BLACK);
 
-		float scroll = GetMouseWheelMove();
-		if (scroll != 0)
+		if(IsKeyDown(45))
 		{
-			uint new_tile_size = uclamp(8, main_grid->tile_width + scroll, screensize_x/10);
+			uint new_tile_size = uclamp(8, main_grid->tile_width + 1, screensize_x/10);
 			tl_resize_grid(&main_grid, main_grid->offset_x, main_grid->offset_y, 
 							main_grid->on_scr_size_x, main_grid->on_scr_size_y, new_tile_size, new_tile_size);
 		}
+		else if(IsKeyDown(47))
+		{
+			uint new_tile_size = uclamp(8, main_grid->tile_width - 1, screensize_x/10);
+			tl_resize_grid(&main_grid, main_grid->offset_x, main_grid->offset_y, 
+							main_grid->on_scr_size_x, main_grid->on_scr_size_y, new_tile_size, new_tile_size);
+		}
+		
 
 		if(IsWindowResized())
 		{
@@ -109,9 +118,17 @@ int main(){
 		}
 		
 		// Main grid
-		ascui_draw_ui(main_grid, top_container);
-	
 		Pos_t mouse_grid_pos = tl_screen_to_grid_coords(main_grid, pos(mouse_scr_pos.x, mouse_scr_pos.y));
+		cursor.x = mouse_grid_pos.x;
+		cursor.y = mouse_grid_pos.y;
+		cursor.right_button_pressed = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
+		cursor.left_button_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+		cursor.scroll = GetMouseWheelMove();
+		
+		ascui_draw_ui(main_grid, &top_container, &cursor);
+
+		printf("\n%p", cursor.selected_container);
+	
 		tl_draw_tile(main_grid, mouse_grid_pos.x, mouse_grid_pos.y, 'A', WHITE, DEF_COLOR, &square_font);
 		
 		tl_render_grid(main_grid);
@@ -119,8 +136,20 @@ int main(){
 		char buf[50];
 		sprintf(buf, "(%u, %u)", mouse_grid_pos.x, mouse_grid_pos.y);
 		DrawText(buf, 0, 0, 24, c(200, 0, 200));
+
+		int charp = GetCharPressed();
+		int keyp = GetKeyPressed();
+
+		if (charp != 0 || keyp != 0)
+			printf("\n(c[%d], k[%d])", charp, keyp);
+
 		
-        DrawFPS(0,28);
+		bool zero = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+		bool one = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
+		if (zero || one)
+			printf("l:%b, r:%b", zero, one);
+		
+        DrawFPS(0,64);
         EndDrawing();
     }
     UnloadFont(square_font);

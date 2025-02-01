@@ -45,9 +45,9 @@ Grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_s
 
     grid->tiles = calloc(grid_size(grid), sizeof(Tile_t));
 
-    fprintf(stderr, "tl_grid initialized - size: %d x %d -> %d tiles - coords: (0-%d, 0-%d)\n", 
-    		grid_width(grid), grid_height(grid), grid_size(grid), 
-    		grid_width(grid) - 1, grid_height(grid) - 1);
+    // fprintf(stderr, "tl_grid initialized - size: %d x %d -> %d tiles - coords: (0-%d, 0-%d)\n",
+    		// grid_width(grid), grid_height(grid), grid_size(grid),
+    		// grid_width(grid) - 1, grid_height(grid) - 1);
     
     return grid;
 }
@@ -97,7 +97,6 @@ void tl_resize_grid(Grid_t **grid, int new_offset_x, int new_offset_y, int new_s
 	tl_deinit_grid(*grid);
 	*grid = new_grid;
 }
-
 
 // x0 < x1
 // x1 <= top grid width

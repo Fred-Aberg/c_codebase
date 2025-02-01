@@ -44,10 +44,10 @@ typedef enum
 typedef struct
 {
 	bool open;
-	Size_Type_e size_type;
-	uint size;
-	bool scrollable;
 	Container_Type_e container_type;
+	uint scroll_offset;
+	uint size;
+	Size_Type_e size_type;
 	void *container_type_data;
 }Container_t;
 
@@ -68,15 +68,16 @@ typedef struct
 
 typedef struct
 {
+	Color bg_col;
+	Color text_col;
 	uint text_len;
 	char *text;
 }Text_data_t;
 
-// container_type_data = Grid_t *subgrid;
-// typedef struct
-// {
-	// Grid_t *subgrid;
-// }Subgrid_data_t;
+typedef struct
+{
+	Grid_t *subgrid;
+}Subgrid_data_t;
 
 typedef int (*UI_side_effect_func)(void *domain, void *type_data, KeyboardKey input);
 
@@ -90,28 +91,33 @@ typedef struct
 
 typedef struct
 {
-    Pos_t pos;
+    bool right_button_pressed; 
+    bool left_button_pressed; 
+    uint x;
+    uint y;
+    Container_t *selected_container;
+    float scroll;
 } Cursor_t;
 
-void ascui_draw_ui(Grid_t *grid, Container_t top_container);
+void ascui_draw_ui(Grid_t *grid, Container_t *top_container, Cursor_t *cursor);
 
-Container_t ascui_create_container(bool open, Size_Type_e s_type, uint size, bool scrollable,
+Container_t ascui_create_container(bool open, Size_Type_e s_type, uint size,
 									Container_orientation_e orientation, uint n_subcontainers);
 									
 Container_data_t *ascui_get_container_data(Container_t container);
 
-Container_t ascui_create_box(bool open, Size_Type_e s_type, uint size, bool scrollable, Container_orientation_e orientation, 
-								uint n_subcontainers, Container_style_t style);
+Container_t ascui_create_box(bool open, Size_Type_e s_type, uint size,
+									Container_orientation_e orientation, uint n_subcontainers, Container_style_t style);
 
 Box_data_t *ascui_get_box_data(Container_t container);
 
-Container_t ascui_create_text(bool open, Size_Type_e s_type, uint size, bool scrollable, uint text_len, char *text);
+Container_t ascui_create_text(bool open, Size_Type_e s_type, uint size, uint text_len, char *text, Color text_col, Color bg_color);
 
 Text_data_t *ascui_get_text_data(Container_t container);
 
-Container_t ascui_create_subgrid(bool open, Size_Type_e s_type, uint size, Grid_t *subgrid);
+Container_t ascui_create_subgrid(bool open, Size_Type_e s_type, uint size, Grid_t *subgrid, Color default_color, Font *default_font);
 
-Grid_t *ascui_get_subgrid(Container_t container);
+Subgrid_data_t *ascui_get_subgrid_data(Container_t container);
 
 Container_t *ascui_get_nth_subcontainer(Container_t container, uint n);
 

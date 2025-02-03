@@ -10,6 +10,7 @@ typedef struct
     uint y;
 } Pos_t;
 
+#define c(r, g, b) (Color){r, g, b, 255}
 #define pos(x, y) (Pos_t){x, y}
 
 uint umin(uint a, uint b);

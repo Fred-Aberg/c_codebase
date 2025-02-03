@@ -87,6 +87,10 @@ int main(){
 	Container_t *right_container = ascui_get_nth_subcontainer(*second_container, 1);
 	ascui_set_nth_subcontainer(*right_container, 0, ascui_create_subgrid(true, PERCENTAGE, 100, NULL, main_grid->default_col, main_grid->default_font));
 
+	Container_t *subgrid_c = ascui_get_nth_subcontainer(*right_container, 0);
+	Subgrid_data_t *subg_data = ascui_get_subgrid_data(*subgrid_c);
+	
+
 	Cursor_t cursor; 
 	
     while (!WindowShouldClose()){
@@ -133,21 +137,20 @@ int main(){
 		
 		tl_render_grid(main_grid);
 
+
+		Pos_t subgrid_size = tl_grid_get_size(subg_data->subgrid);
+		tl_draw_rect(subg_data->subgrid, 0,0, subgrid_size.x - 1, subgrid_size.y - 1, '-', c(200, 20, 20), c(100,10,10), NULL);
+		tl_render_grid(subg_data->subgrid);
+
 		char buf[50];
 		sprintf(buf, "(%u, %u)", mouse_grid_pos.x, mouse_grid_pos.y);
 		DrawText(buf, 0, 0, 24, c(200, 0, 200));
 
-		int charp = GetCharPressed();
-		int keyp = GetKeyPressed();
-
-		if (charp != 0 || keyp != 0)
-			printf("\n(c[%d], k[%d])", charp, keyp);
-
-		
-		bool zero = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-		bool one = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
-		if (zero || one)
-			printf("l:%b, r:%b", zero, one);
+		// int charp = GetCharPressed();
+		// int keyp = GetKeyPressed();
+// 
+		// if (charp != 0 || keyp != 0)
+			// printf("\n(c[%d], k[%d])", charp, keyp);
 		
         DrawFPS(0,64);
         EndDrawing();

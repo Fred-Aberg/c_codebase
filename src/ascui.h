@@ -4,7 +4,6 @@
 #include "raylib.h"
 #include <stdbool.h>
 
-#define c(r, g, b) (Color){r, g, b, 255}
 #define NO_COLOR (Color){0, 0, 0, 0}
 #define style(bg_col, border_col, char_col, border_h_symbol, border_v_symbol, corner_symbol) (Container_style_t){bg_col, border_col, char_col, border_h_symbol, border_v_symbol, corner_symbol}
 

@@ -5,6 +5,7 @@
 
 #define NO_BG (Color) {0,0,0,0}
 #define NO_SMBL 0
+#define CALCULATE_MAX_TILES 0
 
 typedef struct
 {
@@ -21,7 +22,8 @@ typedef struct
     int on_scr_size_x;
     int on_scr_size_y;
     uint tile_width;
-    uint tile_height;
+    uint max_tile_count;
+    float tile_h_to_w_ratio;
     Color default_col;
     Font *default_font;
 
@@ -29,7 +31,7 @@ typedef struct
 } Grid_t;
 
 Grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_size_y, 
-					uint tile_width, uint tile_height, Color def_col, Font *def_font);
+					uint tile_width, float tile_h_to_w_ratio, uint max_tile_count, Color def_col, Font *def_font);
 
 void tl_deinit_grid(Grid_t *grid);
 
@@ -37,9 +39,9 @@ Pos_t tl_grid_get_size(Grid_t *grid);
 
 void tl_render_grid(Grid_t *grid);
 
-void tl_resize_grid(Grid_t **grid, int new_offset_x, int new_offset_y, int new_scr_size_x, int new_scr_size_y, uint new_tile_width, uint new_tile_height);
+void tl_resize_grid(Grid_t *grid, int new_offset_x, int new_offset_y, int new_scr_size_x, int new_scr_size_y, uint new_tile_width);
 
-void tl_fit_subgrid(Grid_t *top_grid, Grid_t **sub_grid, uint x0, uint y0, uint x1, uint y1);
+void tl_fit_subgrid(Grid_t *top_grid, Grid_t *sub_grid, uint x0, uint y0, uint x1, uint y1);
 
 void tl_draw_tile(Grid_t *grid, uint x, uint y, char symbol, Color char_col, Color bg_col, Font *font);
 

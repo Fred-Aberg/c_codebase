@@ -10,6 +10,8 @@
 #define tile_height(grid) (uint)(grid->tile_h_to_w_ratio * (float)grid->tile_width)
 #define grid_height(grid) ((grid->on_scr_size_y) / tile_height(grid))
 #define grid_size(grid) (grid_width(grid) * grid_height(grid))
+#define rendered_grid_size_x(grid) (grid_width(grid) * grid->tile_width)
+#define rendered_grid_size_y(grid) (grid_height(grid) * tile_height(grid))
 
 Tile_t *get_tile(Grid_t *grid, uint x, uint y)
 {
@@ -82,11 +84,10 @@ void tl_render_grid(Grid_t *grid)
             tile = grid->tiles[i];
             pos = i_to_pos(grid, i);
 
-			DrawRectangle(grid->offset_x + pos.x * grid->tile_width, grid->offset_y + pos.y * tile_height,
-						 grid->tile_width, tile_height, tile.bg_col);
-            // if (tile.bg_col.a != 0) DrawRectangle(x * X_TL_SIZE, y * Y_TL_SIZE, X_TL_SIZE, Y_TL_SIZE, tile.bg_col);
-            // else                    DrawRectangle(x * X_TL_SIZE, y * Y_TL_SIZE, X_TL_SIZE, Y_TL_SIZE, GRID->default_col);
-
+            if (tile.bg_col.a != 0) 
+					DrawRectangle(grid->offset_x + pos.x * grid->tile_width, grid->offset_y + pos.y * tile_height,
+								 grid->tile_width, tile_height, tile.bg_col);
+								 
             if (tile.symbol != 0 && tile.char_col.a != 0)
             {
             	int txt_padding = grid->tile_width * 0.15f; // 15% padding
@@ -97,24 +98,49 @@ void tl_render_grid(Grid_t *grid)
     }
 }
 
+void tl_center_grid_on_screen(Grid_t *grid, uint scr_size_x, uint scr_size_y)
+{
+	uint actual_grid_scr_size_x = grid_width(grid) * grid->tile_width;
+	uint actual_grid_scr_size_y = grid_height(grid) * tile_height(grid);
+
+	grid->on_scr_size_x = actual_grid_scr_size_x;
+	grid->on_scr_size_y = actual_grid_scr_size_y;
+
+	grid->offset_x = (scr_size_x - actual_grid_scr_size_x)/2;
+	grid->offset_y = (scr_size_y - actual_grid_scr_size_y)/2;
+}
+
 void tl_resize_grid(Grid_t *grid, int new_offset_x, int new_offset_y, int new_scr_size_x, int new_scr_size_y, uint new_tile_width)
 {
 	uint new_width = new_scr_size_x / new_tile_width;
 	uint new_tile_height = new_tile_width * grid->tile_h_to_w_ratio;
 	uint new_height = new_scr_size_y / new_tile_height;
 	uint new_size = new_width * new_height;
-	printf("\nGrid resizing started: \n  w[%u -> %u]\n  [%u x %u] -> [%u x %u]\n  size[%u/%u]", 
-	grid->tile_width, new_tile_width, grid_width(grid), grid_height(grid), new_width, new_height, new_size, grid->max_tile_count);
+	
+	printf("\nGrid resizing started: \n  w[%u -> %u]\n  [%u x %u] -> [%u x %u]\n  size[%u/%u]\n  screen: [%d x %d] -> [%d x %d]", 
+		grid->tile_width, new_tile_width, grid_width(grid), grid_height(grid), new_width, new_height, new_size, grid->max_tile_count,
+		grid->on_scr_size_x, grid->on_scr_size_y, new_scr_size_x, new_scr_size_y);
 
 	if(new_size > grid->max_tile_count)
 	{
-		float r = grid->tile_h_to_w_ratio;
-		float max = (float)grid->max_tile_count;
-		uint w_fit = (uint)(sqrt(max/r));
-		uint h_fit = (uint)(sqrt(max/r)*r);
+	/*
+		grid_w * grid_h <= MAX
+		grid_w = scr_x / tile_w
+		grid_h = scr_y / tile_h, tile_h = tile_w * r_t, = scr_y / (tile_w * r_t)
+		(scr_x / tile_w) * (scr_y / (tile_w * r_t)) <= MAX
+		(scr_x * scr_y) / (tile_w² * r_t) <= MAX		| * tile_w²
+		(scr_x * scr_y) / r_t <= MAX * tile_w²			| / MAX
+		(scr_x * scr_y) / (r_t * MAX) <= tile_w²		| sqrt()
+		sqrt((scr_x * scr_y) / (r_t * MAX)) <= tile_w
+		floor(sqrt((scr_x * scr_y) / (r_t * MAX))) ~ tile_w
+		
+		
+		
+	*/
 
-		new_tile_width = new_scr_size_x / w_fit;
-		new_tile_height = new_scr_size_y / h_fit;
+		float r_t = grid->tile_h_to_w_ratio;
+		float max = (float)grid->max_tile_count;
+		new_tile_width = ceil(sqrt(((float)new_scr_size_x * (float)new_scr_size_y) / (r_t * max)));
 	}
 
 	grid->offset_x = new_offset_x;
@@ -123,8 +149,8 @@ void tl_resize_grid(Grid_t *grid, int new_offset_x, int new_offset_y, int new_sc
 	grid->on_scr_size_y = new_scr_size_y;
 	grid->tile_width = new_tile_width;
 	
-	printf("\n  Grid Resized:\n  size: %d x %d -> %d tiles (MAX[%u]) - coords: (0-%d, 0-%d)\n",
-	    		grid_width(grid), grid_height(grid), grid_size(grid), grid->max_tile_count,
+	printf("\n  Grid Resized:\n  new tile_width: %u\n  new size: %d x %d -> %d tiles (MAX[%u]) - coords: (0-%d, 0-%d)\n",
+	    		new_tile_width, grid_width(grid), grid_height(grid), grid_size(grid), grid->max_tile_count,
 	    		grid_width(grid) - 1, grid_height(grid) - 1);
 }
 
@@ -213,6 +239,8 @@ uint tl_draw_text(Grid_t * grid, uint x, uint y, uint wrap, char *text, uint len
 
 Pos_t tl_screen_to_grid_coords(Grid_t *grid, Pos_t xy)
 {
+	xy.x = uclamp(grid->offset_x, xy.x, rendered_grid_size_x(grid)); 
+	xy.y = uclamp(grid->offset_y, xy.y, rendered_grid_size_y(grid)); 
     return pos((xy.x - grid->offset_x) / grid->tile_width, (xy.y - grid->offset_y) / tile_height(grid));
 }
 

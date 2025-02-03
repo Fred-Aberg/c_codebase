@@ -23,8 +23,8 @@ int main(){
    	if (screensize_x == 0)
  	   	{
 			// Defaults
- 	   		screensize_x = 1000;
- 	   		screensize_y = 500;
+ 	   		screensize_x = 1500;
+ 	   		screensize_y = 1000;
  	   		tile_width = 25;
  	   	}
    	else
@@ -80,24 +80,14 @@ int main(){
     	if(IsKeyDown(45))
 		{
 			uint new_tile_size = (*active_grid)->tile_width + 1;
-			tl_resize_grid(*active_grid, (*active_grid)->offset_x, (*active_grid)->offset_y, 
-							(*active_grid)->on_scr_size_x, (*active_grid)->on_scr_size_y, new_tile_size);
-			if (*active_grid == main_grid)
-			{
-				// main_grid_size = tl_grid_get_size(main_grid);
-				// tl_fit_subgrid(main_grid, sub_grid, main_grid_size.x / 2, main_grid_size.y / 3, main_grid_size.x - 2, main_grid_size.y - 2);
-			}
+			tl_resize_grid(*active_grid, 0, 0, screensize_x, screensize_y, new_tile_size);
+			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}
 		else if(IsKeyDown(47))
 		{
 			uint new_tile_size = (*active_grid)->tile_width - 1;
-			tl_resize_grid(*active_grid, (*active_grid)->offset_x, (*active_grid)->offset_y, 
-							(*active_grid)->on_scr_size_x, (*active_grid)->on_scr_size_y, new_tile_size);
-			if (*active_grid == main_grid)
-			{
-				// main_grid_size = tl_grid_get_size(main_grid);
-				// tl_fit_subgrid(main_grid, sub_grid, main_grid_size.x / 2, main_grid_size.y / 3, main_grid_size.x - 2, main_grid_size.y - 2);
-			}
+			tl_resize_grid(*active_grid, 0, 0, screensize_x, screensize_y, new_tile_size);
+			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}
 
 		if(IsWindowResized())
@@ -106,9 +96,7 @@ int main(){
 			screensize_y = GetScreenHeight();
 			
 			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, main_grid->tile_width);
-
-			// main_grid_size = tl_grid_get_size(main_grid);
-			// tl_fit_subgrid(main_grid, sub_grid, main_grid_size.x / 2, main_grid_size.y / 3, main_grid_size.x - 2, main_grid_size.y - 2);
+			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}
 		
 		// Main grid

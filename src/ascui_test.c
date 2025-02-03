@@ -14,7 +14,6 @@ int main(){
    	int screensize_x = 0;
 	int screensize_y = 0;
 	uint tile_width = 0;
-	uint tile_height = 0;
 	char input[50];
  
    	printf("Screen width:\n");
@@ -24,10 +23,9 @@ int main(){
    	if (screensize_x == 0)
    	{
    		// Defaults
-   		screensize_x = 1000;
-   		screensize_y = 500;
-   		tile_width = 50;
-   		tile_height = 50;
+   		screensize_x = 1500;
+   		screensize_y = 1000;
+   		tile_width = 25;
    	}
    	else
    	{
@@ -39,11 +37,7 @@ int main(){
 	   	fgets(input, sizeof(input), stdin);
 	   	tile_width = atoi(input);
 
-		printf("Tile height:\n");
-	   	fgets(input, sizeof(input), stdin);
-		tile_height = atoi(input);
-
-		if (screensize_x == 0 || screensize_y == 0 || tile_height == 0 || tile_width == 0)
+		if (screensize_x == 0 || screensize_y == 0 || tile_width == 0)
 		{
 			perror("Invalid inputs");
 			return 0;
@@ -59,7 +53,7 @@ int main(){
     SetWindowMinSize(200, 200);
 
 	// Main Grid
-	Grid_t *main_grid = tl_init_grid(0, 0, screensize_x, screensize_y, tile_width, tile_height, DEF_COLOR, &square_font);
+	Grid_t *main_grid = tl_init_grid(0, 0, screensize_x, screensize_y, tile_width, 1.0f, CALCULATE_MAX_TILES, DEF_COLOR, &square_font);
 
 	// UI
 	Container_style_t style1 = style(c(20,5,10), c(80, 20, 40), c(200, 50, 100), '=', '|', '+');
@@ -94,22 +88,22 @@ int main(){
 	Cursor_t cursor; 
 	
     while (!WindowShouldClose()){
-		Vector2 mouse_scr_pos = (Vector2){GetMouseX(), GetMouseY()};
+		Pos_t mouse_scr_pos = pos(GetMouseX(), GetMouseY());
 
         BeginDrawing();
         ClearBackground(BLACK);
 
 		if(IsKeyDown(45))
 		{
-			uint new_tile_size = uclamp(8, main_grid->tile_width + 1, screensize_x/10);
-			tl_resize_grid(&main_grid, main_grid->offset_x, main_grid->offset_y, 
-							main_grid->on_scr_size_x, main_grid->on_scr_size_y, new_tile_size, new_tile_size);
+			uint new_tile_size = main_grid->tile_width + 1;
+			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, new_tile_size);
+			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}
 		else if(IsKeyDown(47))
 		{
-			uint new_tile_size = uclamp(8, main_grid->tile_width - 1, screensize_x/10);
-			tl_resize_grid(&main_grid, main_grid->offset_x, main_grid->offset_y, 
-							main_grid->on_scr_size_x, main_grid->on_scr_size_y, new_tile_size, new_tile_size);
+			uint new_tile_size = main_grid->tile_width - 1;
+			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, new_tile_size);
+			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}
 		
 
@@ -118,16 +112,22 @@ int main(){
 			screensize_x = GetScreenWidth();
 			screensize_y = GetScreenHeight();
 			
-			tl_resize_grid(&main_grid, 0, 0, screensize_x, screensize_y, main_grid->tile_width, main_grid->tile_height);
+			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, main_grid->tile_width);
+			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}
 		
 		// Main grid
-		Pos_t mouse_grid_pos = tl_screen_to_grid_coords(main_grid, pos(mouse_scr_pos.x, mouse_scr_pos.y));
+		Pos_t mouse_grid_pos = tl_screen_to_grid_coords(main_grid, mouse_scr_pos);
 		cursor.x = mouse_grid_pos.x;
 		cursor.y = mouse_grid_pos.y;
 		cursor.right_button_pressed = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
 		cursor.left_button_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 		cursor.scroll = GetMouseWheelMove();
+
+
+		Pos_t main_grid_size = tl_grid_get_size(main_grid);
+		tl_draw_rect(main_grid, 0,0, main_grid_size.x - 1, main_grid_size.y - 1, '0', NO_COLOR, c(0,0,0), NULL);
+
 		
 		ascui_draw_ui(main_grid, &top_container, &cursor);
 

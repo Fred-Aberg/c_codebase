@@ -6,6 +6,33 @@
 #include "ascui.h"
 #include "raytiles.h"
 
+static void draw_cursor_selection(Grid_t *grid, Cursor_t *cursor, Container_t *container, uint x0, uint y0, uint x1, uint y1)
+{
+	if(cursor->selected_container != container) return;
+	if (container->container_type == BOX || container->container_type == CONTAINER)
+	{
+		for (uint x = x0; x <= x1; x++)
+		{
+			tl_set_tile_bg(grid, x, y0, WHITE);
+			tl_set_tile_bg(grid, x, y1, WHITE);
+		}
+		for (uint y = y0 + 1; y < y1; y++)
+		{
+			tl_set_tile_bg(grid, x0, y, WHITE);
+			tl_set_tile_bg(grid, x1, y, WHITE);
+		}
+	}
+	else
+	{
+		for (uint x = x0; x <= x1; x++)
+		{
+			for (uint y = y0; y <= y1; y++)
+			{
+				tl_set_tile_bg(grid, x, y, WHITE);
+			}
+		}
+	}
+}
 
 static void check_cursor_selection(Cursor_t *cursor, Container_t *container, uint x0, uint y0, uint x1, uint y1)
 {		
@@ -37,8 +64,6 @@ static uint ascui_draw_container_percentage_split(Grid_t *grid, Container_t *con
 
 	if (x1 <= x0 || y1 <= y0)
 		return 0;
-
-	check_cursor_selection(cursor, container, x0, y0, x1, y1);
 		
 	uint subcontainers_size = 0;
 	float percentage;
@@ -113,6 +138,7 @@ static uint ascui_draw_container_percentage_split(Grid_t *grid, Container_t *con
 		y1++;
 		draw_box(grid, style, x0, y0, x1, y1);
 	}
+	draw_cursor_selection(grid, cursor, container, x0, x1, y0, y1);
 	return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
 }
 
@@ -150,7 +176,11 @@ static uint ascui_draw_container(Grid_t *grid, Container_t *container, uint x0, 
 					percentage_split = false;
 
 			if (percentage_split && n_subcontainers != 0)
-				return ascui_draw_container_percentage_split(grid, container, x0, y0, x1, y1, parent_orientation, cursor);
+			{
+				tiles_drawn = ascui_draw_container_percentage_split(grid, container, x0, y0, x1, y1, parent_orientation, cursor);
+				draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
+				return tiles_drawn;
+			}
 
 			for (uint i = 0; i < n_subcontainers; i++)
 			{
@@ -162,11 +192,13 @@ static uint ascui_draw_container(Grid_t *grid, Container_t *container, uint x0, 
 					if (c_data.orientation == HORIZONTAL)
 					{
 						ascui_draw_container(grid, c_subcontainer, x0, y0 + tiles_drawn, x1, y1, c_data.orientation, cursor);
+						draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
 						return y1-y0 + 1;
 					}
 					else if (c_data.orientation == VERTICAL)
 					{
 						tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0 + tiles_drawn, y0, x1, y1, c_data.orientation, cursor);
+						draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
 						return x1-x0 + 1;
 					}
 				}
@@ -236,7 +268,7 @@ static uint ascui_draw_container(Grid_t *grid, Container_t *container, uint x0, 
 				else if (parent_orientation == VERTICAL)
 					tiles_drawn = x1-x0 + 1;
 			}
-			
+			draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
 			return tiles_drawn;
 		case BOX:
 			Box_data_t b_data = *ascui_get_box_data(*container);
@@ -249,7 +281,11 @@ static uint ascui_draw_container(Grid_t *grid, Container_t *container, uint x0, 
 								percentage_split = false;
 			
 			if (percentage_split && n_subcontainers != 0)
-				return ascui_draw_container_percentage_split(grid, container, x0, y0, x1, y1, parent_orientation, cursor);
+			{
+				tiles_drawn = ascui_draw_container_percentage_split(grid, container, x0, y0, x1, y1, parent_orientation, cursor);
+				draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
+				return tiles_drawn;
+			}
 			
 
 			for (uint i = 0; i < n_subcontainers; i++)
@@ -262,11 +298,13 @@ static uint ascui_draw_container(Grid_t *grid, Container_t *container, uint x0, 
 					if (b_data.orientation == HORIZONTAL)
 					{
 						ascui_draw_container(grid, c_subcontainer, x0 + 1, y0 + tiles_drawn + 1, x1 - 1, y1 - 1, b_data.orientation, cursor);
+						draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
 						return y1-y0 + 1;
 					}
 					else if (c_data.orientation == VERTICAL)
 					{
 						tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0 + tiles_drawn + 1, y0 + 1, x1 - 1, y1 - 1, b_data.orientation, cursor);
+						draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
 						return x1-x0 + 1;
 					}
 				}
@@ -346,7 +384,7 @@ static uint ascui_draw_container(Grid_t *grid, Container_t *container, uint x0, 
 			}
 
 			draw_box(grid, b_data.style, x0, y0, x1, y1);
-			
+			draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
 			return tiles_drawn;
 		case TEXT:
 			Text_data_t t_data = *ascui_get_text_data(*container);
@@ -361,7 +399,10 @@ static uint ascui_draw_container(Grid_t *grid, Container_t *container, uint x0, 
 					{ _y++; _x = 0; }
 				
 				if (y0 + _y > y1)
+				{
+					draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
 					return _y + 1; // tiles_drawn
+				}
 				if (t_data.text[i] == '\n')
 				{
 					gap = x1-x0-_x+1;
@@ -393,12 +434,14 @@ static uint ascui_draw_container(Grid_t *grid, Container_t *container, uint x0, 
 			for (uint y = _y + 1; y + y0 <= y1; y++)
 				for (uint x = 0; x + x0 <= x1; x++)
 					tl_draw_tile(grid, x0 + x, y0 + y, 0, t_data.text_col, t_data.bg_col, NULL);
-
+					
+			draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
 			return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
 
 		case SUBGRID:
 			Subgrid_data_t *subg_data = ascui_get_subgrid_data(*container);
-			tl_fit_subgrid(grid, &subg_data->subgrid, x0, y0, x1, y1);
+			tl_fit_subgrid(grid, subg_data->subgrid, x0, y0, x1, y1);
+			draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
 		default:
 			return 0;
 	}
@@ -502,7 +545,7 @@ Container_t ascui_create_subgrid(bool open, Size_Type_e s_type, uint size, Grid_
 	if (subgrid != NULL)
 		subg_data->subgrid = subgrid;
 	else
-		subg_data->subgrid = tl_init_grid(0,0, 10,10,4,4, default_color, default_font);
+		subg_data->subgrid = tl_init_grid(0,0, 10, 10, 4, 1.0f, 1000, default_color, default_font);
 
 	return subgrid_container;
 }

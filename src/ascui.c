@@ -6,7 +6,7 @@
 #include "ascui.h"
 #include "raytiles.h"
 
-static void draw_cursor_selection(Grid_t *grid, Cursor_t *cursor, Container_t *container, uint x0, uint y0, uint x1, uint y1)
+static void draw_cursor_selection(Grid_t *grid, Cursor_t *cursor, Container_t *container, uint x0, uint y0, uint x1, uint y1, uint max_scroll)
 {
 	if(cursor->selected_container != container) return;
 	if (container->container_type == BOX || container->container_type == CONTAINER)
@@ -32,11 +32,20 @@ static void draw_cursor_selection(Grid_t *grid, Cursor_t *cursor, Container_t *c
 			}
 		}
 	}
+
+	if(cursor->scroll != 0 && max_scroll != 0)
+	{
+		tl_set_tile_bg(grid, x0, y0 + (y1-y0) * ((float)container->scroll_offset / (float)max_scroll), BLACK);
+	}
+	// if(container->scroll_offset != 0)
+	// {
+		// tl_set_tile_bg(grid, x0, y0 + container->scroll_offset, GRAY);
+	// }
 }
 
-static void check_cursor_selection(Cursor_t *cursor, Container_t *container, uint x0, uint y0, uint x1, uint y1)
+static void check_cursor_selection(Cursor_t *cursor, Container_t *container, uint x0, int y0, uint x1, int y1)
 {		
-	if(x0 <= cursor->x && x1 >= cursor->x && y0 <= cursor->y && y1 >= cursor->y)
+	if(x0 <= cursor->x && x1 >= cursor->x && y0 <= (int)cursor->y && y1 >= (int)cursor->y)
 		cursor->selected_container = container;
 }
 
@@ -54,9 +63,10 @@ static void draw_box(Grid_t *grid, Container_style_t style, uint x0, uint y0, ui
 }
 
 
-static uint ascui_draw_container(Grid_t *grid, Container_t *container, uint x0, uint y0, uint x1, uint y1, Container_orientation_e parent_orientation, Cursor_t *cursor);
+static uint ascui_draw_container(Grid_t *grid, Container_t *container, uint x0, uint y0, uint x1, uint y1,
+								 Container_orientation_e parent_orientation, Cursor_t *cursor, uint cummulative_scroll_offset);
 
-
+/*
 static uint ascui_draw_container_percentage_split(Grid_t *grid, Container_t *container, uint x0, uint y0, uint x1, uint y1, Container_orientation_e parent_orientation, Cursor_t *cursor)
 {
 	if (!container->open)
@@ -68,7 +78,8 @@ static uint ascui_draw_container_percentage_split(Grid_t *grid, Container_t *con
 	uint subcontainers_size = 0;
 	float percentage;
 	uint i = 0;
-	uint drawn_tiles = 0;
+	uint tiles_drawn = 0;
+
 
 	uint n_subcontainers;
 	Container_t *subcontainers;
@@ -125,9 +136,9 @@ static uint ascui_draw_container_percentage_split(Grid_t *grid, Container_t *con
 	{
 		// printf("\n[%u] -> %u", i, allotted_tiles[i]);
 		if (orientation == HORIZONTAL)
-			drawn_tiles += ascui_draw_container(grid, &subcontainers[i], x0, y0 + drawn_tiles, x1 , y0 + drawn_tiles + allotted_tiles[i] - 1, orientation, cursor);
+			tiles_drawn += ascui_draw_container(grid, &subcontainers[i], x0, y0 + tiles_drawn, x1 , y0 + tiles_drawn + allotted_tiles[i] - 1, orientation, cursor);
 		else	// VERTICAL
-			drawn_tiles += ascui_draw_container(grid, &subcontainers[i], x0 + drawn_tiles, y0, x0 + drawn_tiles + allotted_tiles[i] - 1 , y1, orientation, cursor);		
+			tiles_drawn += ascui_draw_container(grid, &subcontainers[i], x0 + tiles_drawn, y0, x0 + tiles_drawn + allotted_tiles[i] - 1 , y1, orientation, cursor);		
 	}
 
 	if(container->container_type == BOX)
@@ -138,11 +149,12 @@ static uint ascui_draw_container_percentage_split(Grid_t *grid, Container_t *con
 		y1++;
 		draw_box(grid, style, x0, y0, x1, y1);
 	}
-	draw_cursor_selection(grid, cursor, container, x0, x1, y0, y1);
+	draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1, 0);
 	return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
-}
+}*/
 
-static uint ascui_draw_container(Grid_t *grid, Container_t *container, uint x0, uint y0, uint x1, uint y1, Container_orientation_e parent_orientation, Cursor_t *cursor)
+static uint ascui_draw_container(Grid_t *grid, Container_t *container, uint x0, uint y0, uint x1, uint y1,
+								 Container_orientation_e parent_orientation, Cursor_t *cursor, uint cummulative_scroll_offset)
 {
 	if (!container->open)
 		return 0;
@@ -150,221 +162,159 @@ static uint ascui_draw_container(Grid_t *grid, Container_t *container, uint x0, 
 	if (x1 <= x0 || y1 <= y0)
 		return 0;
 
-	check_cursor_selection(cursor, container, x0, y0, x1, y1);
-
-	uint tiles_drawn = 0; 	// Number of pixels required for this container and all it's subcontainers
-							// Cannot exceed x1-x0 if VERTICAL, y1-y0 if HORIZONTAL
-		
+	check_cursor_selection(cursor, container, x0, y0 , x1, y1);		
 
 	float percentage;
-	uint sub_x1;
-	uint sub_y1;
 	uint sub_x0;
 	uint sub_y0;
+	uint sub_x1;
+	uint sub_y1;
+
 	uint n_subcontainers;
 	Container_t *c_subcontainer;
 	Container_Type_e c_type = container->container_type;
-	bool percentage_split = true;
-	switch (c_type)
+	// bool percentage_split = true;
+
+	uint tiles_drawn = 0;
+	 	
+	if (c_type == CONTAINER || c_type == BOX)
 	{
-		case CONTAINER:
+		Container_t *subcontainers;
+		Container_orientation_e orientation;
+		Container_style_t style;
+		uint total_container_length;
+
+		if (c_type == CONTAINER)
+		{
 			Container_data_t c_data = *ascui_get_container_data(*container);
 			n_subcontainers = c_data.n_subcontainers;
-
-			for (uint i = 0; i < n_subcontainers; i++)
-				if (c_data.subcontainers[i].size_type != PERCENTAGE)
-					percentage_split = false;
-
-			if (percentage_split && n_subcontainers != 0)
-			{
-				tiles_drawn = ascui_draw_container_percentage_split(grid, container, x0, y0, x1, y1, parent_orientation, cursor);
-				draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
-				return tiles_drawn;
-			}
-
-			for (uint i = 0; i < n_subcontainers; i++)
-			{
-				c_subcontainer = &c_data.subcontainers[i];
-
-				// Edge case: Last subcontainer
-				if (i == n_subcontainers - 1)
-				{
-					if (c_data.orientation == HORIZONTAL)
-					{
-						ascui_draw_container(grid, c_subcontainer, x0, y0 + tiles_drawn, x1, y1, c_data.orientation, cursor);
-						draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
-						return y1-y0 + 1;
-					}
-					else if (c_data.orientation == VERTICAL)
-					{
-						tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0 + tiles_drawn, y0, x1, y1, c_data.orientation, cursor);
-						draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
-						return x1-x0 + 1;
-					}
-				}
-
-					
-				if (c_subcontainer->size_type == TILES)
-				{
-					if (c_data.orientation == HORIZONTAL)
-					{
-						sub_x1 = x1;
-						sub_y1 = y0 + tiles_drawn + c_subcontainer->size;
-						if (sub_y1 > y1)
-							break;
-						tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0, y0 + tiles_drawn, sub_x1, sub_y1, c_data.orientation, cursor);
-					}
-					else if (c_data.orientation == VERTICAL)
-					{
-						sub_x1 = x0 + tiles_drawn + c_subcontainer->size;
-						sub_y1 = y1;
-						if (sub_x1 > x1)
-							break;
-						tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0 + tiles_drawn, y0, sub_x1, sub_y1, c_data.orientation, cursor);
-					} 					
-				}
-				else if (c_subcontainer->size_type == PERCENTAGE)
-				{
-					percentage = (float)c_subcontainer->size / 100;
-					if (c_data.orientation == HORIZONTAL)
-					{
-						sub_x1 = x1;
-						sub_y1 = y0 + tiles_drawn + (y1-y0) * percentage - 1; // (y1-y0) * percentage is a length, -1 to make a coord
-						if (sub_y1 > y1)
-							break;
-						tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0, y0 + tiles_drawn, sub_x1, sub_y1, c_data.orientation, cursor);
-					}
-					else if (c_data.orientation == VERTICAL)
-					{
-						sub_x1 = x0 + tiles_drawn + (x1-x0) * percentage - 1;
-						sub_y1 = y1;
-						if (sub_x1 > x1)
-							break;
-						tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0 + tiles_drawn, y0, sub_x1, sub_y1, c_data.orientation, cursor);
-					} 					
-				}
-				else if (c_subcontainer->size_type == GROW)
-				{
-					if (c_data.orientation == HORIZONTAL)
-					{
-						sub_x1 = x1;
-						sub_y1 = y1;
-						tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0, y0 + tiles_drawn, sub_x1, sub_y1, c_data.orientation, cursor);
-					}
-					else if (c_data.orientation == VERTICAL)
-					{
-						sub_x1 = x1;
-						sub_y1 = y1;
-						tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0 + tiles_drawn, y0, sub_x1, sub_y1, c_data.orientation, cursor);
-					} 					
-				}
-			}
+			subcontainers = c_data.subcontainers;
+			orientation = c_data.orientation;
 			
-			if (container->size_type != GROW)
-			{
-				// !GROW => Force the size to be x1-x0 or y1-y0
-				if (parent_orientation == HORIZONTAL)
-					tiles_drawn = y1-y0 + 1;
-				else if (parent_orientation == VERTICAL)
-					tiles_drawn = x1-x0 + 1;
-			}
-			draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
-			return tiles_drawn;
-		case BOX:
+		}
+		else if (c_type == BOX)
+		{
 			Box_data_t b_data = *ascui_get_box_data(*container);
 			n_subcontainers = b_data.n_subcontainers;
-			sub_x0 = x0 + 1;
-			sub_y0 = y0 + 1;
+			subcontainers = b_data.subcontainers;
+			orientation = b_data.orientation;
+			style = b_data.style;
+		}
 
-			for (uint i = 0; i < n_subcontainers; i++)
-							if (b_data.subcontainers[i].size_type != PERCENTAGE)
-								percentage_split = false;
-			
-			if (percentage_split && n_subcontainers != 0)
+		/*
+		for (uint i = 0; i < n_subcontainers; i++)
+			if (subcontainers[i].size_type != PERCENTAGE)
+				percentage_split = false;
+
+		if (percentage_split && n_subcontainers != 0)
+		{
+			tiles_drawn = ascui_draw_container_percentage_split(grid, container, x0, y0, x1, y1, parent_orientation, cursor);
+			draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1, 0);
+			return tiles_drawn;
+		}
+		*/
+
+		// Account for box edges when delegating space for subcontainers
+		if (c_type == BOX) {x0++; y0++; x1--; y1--;}
+
+		for (uint i = 0; i < n_subcontainers; i++)
+		{
+			c_subcontainer = &subcontainers[i];
+			// Edge case: Last subcontainer
+			if (i == n_subcontainers - 1 && container->size_type != GROW)
 			{
-				tiles_drawn = ascui_draw_container_percentage_split(grid, container, x0, y0, x1, y1, parent_orientation, cursor);
-				draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
-				return tiles_drawn;
-			}
-			
+				if (orientation == HORIZONTAL)
+				{
+					ascui_draw_container(grid, c_subcontainer, x0, y0 + tiles_drawn, x1, y1, orientation, cursor, container->scroll_offset + cummulative_scroll_offset);
 
-			for (uint i = 0; i < n_subcontainers; i++)
-			{
-				c_subcontainer = &b_data.subcontainers[i];
+					if (c_type == BOX) 
+					{
+						x0--; y0--; x1++; y1++;
+						draw_box(grid, style, x0, y0, x1, y1);		
+					}
+					draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1, 0);
+					
+					return y1-y0 + 1;
+				}
+				else if (orientation == VERTICAL)
+				{
+					tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0 + tiles_drawn, y0, x1, y1, orientation, cursor, container->scroll_offset + cummulative_scroll_offset);
 
-				// Edge case: Last subcontainer
-				if (i == n_subcontainers - 1)
-				{
-					if (b_data.orientation == HORIZONTAL)
+					if (c_type == BOX) 
 					{
-						ascui_draw_container(grid, c_subcontainer, x0 + 1, y0 + tiles_drawn + 1, x1 - 1, y1 - 1, b_data.orientation, cursor);
-						draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
-						return y1-y0 + 1;
+						x0--; y0--; x1++; y1++;
+						draw_box(grid, style, x0, y0, x1, y1);		
 					}
-					else if (c_data.orientation == VERTICAL)
-					{
-						tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0 + tiles_drawn + 1, y0 + 1, x1 - 1, y1 - 1, b_data.orientation, cursor);
-						draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
-						return x1-x0 + 1;
-					}
-				}
-
-				if (c_subcontainer->size_type == TILES)
-				{
-					if (b_data.orientation == HORIZONTAL)
-					{
-						sub_x1 = x1 - 1;
-						sub_y1 = sub_y0 + tiles_drawn + c_subcontainer->size;
-						if (sub_y1 > y1 - 1)
-							break;
-						tiles_drawn += ascui_draw_container(grid, c_subcontainer, sub_x0, sub_y0 + tiles_drawn, sub_x1, sub_y1, b_data.orientation, cursor);
-					}
-					else if (b_data.orientation == VERTICAL)
-					{
-						sub_x1 = sub_x0 + tiles_drawn + c_subcontainer->size;
-						sub_y1 = y1 - 1;
-						if (sub_x1 > x1 - 1)
-							break;
-						tiles_drawn += ascui_draw_container(grid, c_subcontainer, sub_x0 + tiles_drawn, sub_y0, sub_x1, sub_y1, b_data.orientation, cursor);
-					} 					
-				}
-				else if (c_subcontainer->size_type == PERCENTAGE)
-				{
-					float percentage = (float)c_subcontainer->size / 100;
-					if (b_data.orientation == HORIZONTAL)
-					{
-						sub_x1 = x1 - 1;
-						sub_y1 = sub_y0 + tiles_drawn + (y1-y0-2) * percentage;
-						if (sub_y1 > y1 - 1)
-							break;
-						tiles_drawn += ascui_draw_container(grid, c_subcontainer, sub_x0, sub_y0 + tiles_drawn, sub_x1, sub_y1, b_data.orientation, cursor);
-					}
-					else if (b_data.orientation == VERTICAL)
-					{
-						sub_x1 = sub_x0 + tiles_drawn + (x1-x0-2) * percentage;
-						sub_y1 = y1 - 1;
-						if (sub_x1 > x1 - 1)
-							break;
-						tiles_drawn += ascui_draw_container(grid, c_subcontainer, sub_x0 + tiles_drawn, sub_y0, sub_x1, sub_y1, b_data.orientation, cursor);
-					} 					
-				}
-				else if (c_subcontainer->size_type == GROW)
-				{
-					if (b_data.orientation == HORIZONTAL)
-					{
-						sub_x1 = x1 - 1;
-						sub_y1 = y1 - 1;
-						tiles_drawn += ascui_draw_container(grid, c_subcontainer, sub_x0, sub_y0 + tiles_drawn, sub_x1, sub_y1, b_data.orientation, cursor);
-					}
-					else if (b_data.orientation == VERTICAL)
-					{
-						sub_x1 = x1 - 1;
-						sub_y1 = y1 - 1;
-						tiles_drawn += ascui_draw_container(grid, c_subcontainer, sub_x0 + tiles_drawn, sub_y0, sub_x1, sub_y1, b_data.orientation, cursor);
-					} 					
+					draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1, 0);
+					
+					return x1-x0 + 1;
 				}
 			}
 
+				
+			if (c_subcontainer->size_type == TILES)
+			{
+				if (orientation == HORIZONTAL)
+				{
+					sub_x1 = x1;
+					sub_y1 = y0 + tiles_drawn + c_subcontainer->size;
+					// if (sub_y1 > y1)
+						// break;
+					tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0, y0 + tiles_drawn, sub_x1, sub_y1, orientation, cursor, container->scroll_offset + cummulative_scroll_offset);
+				}
+				else if (orientation == VERTICAL)
+				{
+					sub_x1 = x0 + tiles_drawn + c_subcontainer->size;
+					sub_y1 = y1;
+					if (sub_x1 > x1)
+						break;
+					tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0 + tiles_drawn, y0, sub_x1, sub_y1, orientation, cursor, container->scroll_offset + cummulative_scroll_offset);
+				} 					
+			}
+			else if (c_subcontainer->size_type == PERCENTAGE)
+			{
+				percentage = (float)c_subcontainer->size / 100;
+				if (orientation == HORIZONTAL)
+				{
+					sub_x1 = x1;
+					sub_y1 = y0 + tiles_drawn + (y1-y0) * percentage - 1; // (y1-y0) * percentage is a length, -1 to make a coord
+					// if (sub_y1 > y1)
+						// break;
+					tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0, y0 + tiles_drawn, sub_x1, sub_y1, orientation, cursor, container->scroll_offset + cummulative_scroll_offset);
+				}
+				else if (orientation == VERTICAL)
+				{
+					sub_x1 = x0 + tiles_drawn + (x1-x0) * percentage - 1;
+					sub_y1 = y1;
+					if (sub_x1 > x1)
+						break;
+					tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0 + tiles_drawn, y0, sub_x1, sub_y1, orientation, cursor, container->scroll_offset + cummulative_scroll_offset);
+				} 					
+			}
+			else if (c_subcontainer->size_type == GROW)
+			{
+				if (orientation == HORIZONTAL)
+				{
+					sub_x1 = x1;
+					sub_y1 = y1;
+					tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0, y0 + tiles_drawn, sub_x1, sub_y1, orientation, cursor, container->scroll_offset + cummulative_scroll_offset);
+				}
+				else if (orientation == VERTICAL)
+				{
+					sub_x1 = x1;
+					sub_y1 = y1;
+					tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0 + tiles_drawn, y0, sub_x1, sub_y1, orientation, cursor, container->scroll_offset + cummulative_scroll_offset);
+				} 					
+			}
+		}
+		
+		if(c_type == BOX)
+		{
+			x0--;
+			y0--;
+			x1++;
+			y1++;
+			
 			if (container->size_type == GROW)
 			{
 				// GROW => tiles_drawn is the deciding factor in how many tiles is to be drawn
@@ -372,79 +322,93 @@ static uint ascui_draw_container(Grid_t *grid, Container_t *container, uint x0, 
 					y1 = y0 + tiles_drawn + 1; 
 				else if (parent_orientation == VERTICAL)
 					x1 = x0 + tiles_drawn + 1; 
-				tiles_drawn += 2; // Account for box's sides
 			}
-			else
-			{
-				// !GROW => The given size (x1-x0 or y1-y0) determines how many tiles are drawn
-				if (parent_orientation == HORIZONTAL)
-					tiles_drawn = y1-y0 + 1;
-				else if (parent_orientation == VERTICAL)
-					tiles_drawn = x1-x0 + 1;
-			}
-
-			draw_box(grid, b_data.style, x0, y0, x1, y1);
-			draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
-			return tiles_drawn;
-		case TEXT:
-			Text_data_t t_data = *ascui_get_text_data(*container);
-
-			uint _x = 0;
-			uint _y = 0;
-			uint gap;
-
-			for (uint i = 0; i < t_data.text_len; i++)
-			{
-				if (x0 + _x > x1)
-					{ _y++; _x = 0; }
-				
-				if (y0 + _y > y1)
-				{
-					draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
-					return _y + 1; // tiles_drawn
-				}
-				if (t_data.text[i] == '\n')
-				{
-					gap = x1-x0-_x+1;
-					while (gap != 0)
-					{
-						tl_draw_tile(grid, x0 + _x, y0 + _y, 0, t_data.text_col, t_data.bg_col, NULL);
-						gap--;
-						_x++;
-					}	
-					_y++;
-					_x = 0;
-					continue; 
-				}
-				
-				tl_draw_tile(grid, x0 + _x, y0 + _y, t_data.text[i], t_data.text_col, t_data.bg_col, NULL);
-				_x++;
-			}
-
-			// Gap after text
-			gap = x1-x0-_x + 1;
-			while (gap != 0)
-			{
-				tl_draw_tile(grid, x0 + _x, y0 + _y, 0, t_data.text_col, t_data.bg_col, NULL);
-				gap--;
-				_x++;
-			}
+			draw_box(grid, style, x0, y0, x1, y1);
+		}
 		
-			// Gap below text
-			for (uint y = _y + 1; y + y0 <= y1; y++)
-				for (uint x = 0; x + x0 <= x1; x++)
-					tl_draw_tile(grid, x0 + x, y0 + y, 0, t_data.text_col, t_data.bg_col, NULL);
-					
-			draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
-			return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
+		if (container->size_type != GROW)
+		{
+			// !GROW => Force the size to be x1-x0 or y1-y0
+			if (parent_orientation == HORIZONTAL)
+				tiles_drawn = y1-y0 + 1;
+			else if (parent_orientation == VERTICAL)
+				tiles_drawn = x1-x0 + 1;
+		}
+		
+		total_container_length = tiles_drawn;
 
-		case SUBGRID:
-			Subgrid_data_t *subg_data = ascui_get_subgrid_data(*container);
-			tl_fit_subgrid(grid, subg_data->subgrid, x0, y0, x1, y1);
-			draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1);
-		default:
-			return 0;
+		uint max_scroll = max((int)total_container_length - (int)(y1-y0), 0);
+		container->scroll_offset = umin(container->scroll_offset, max_scroll);
+
+		draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1, max_scroll);
+		return tiles_drawn;
 	}
+	else if(c_type == TEXT)
+	{
+		Text_data_t t_data = *ascui_get_text_data(*container);
+		
+		uint _x = 0;
+		container->scroll_offset = container->scroll_offset;
+		int _y = - container->scroll_offset - cummulative_scroll_offset; // = 0 at no scroll
+		uint total_text_len = 0;
+		
+		uint gap;
+
+		for (uint i = 0; i < t_data.text_len; i++)
+		{
+			if (x0 + _x > x1)
+				{total_text_len++;  _y++; _x = 0; }
+			
+			if (t_data.text[i] == '\n')
+			{
+				gap = x1-x0-_x+1;
+				while (gap != 0)
+				{
+					if(_y >= 0 && !(y0 + max(0, _y) > y1))
+						tl_draw_tile(grid, x0 + _x, y0 + _y, 0, t_data.text_col, t_data.bg_col, NULL);
+					gap--;
+					_x++;
+				}	
+				_y++;
+				total_text_len++;
+				_x = 0;
+				continue; 
+			}
+			if(_y >= 0 && !(y0 + max(0, _y) > y1)) // do not render if tiles have been "scrolled" out of view - or if the text overflows
+				tl_draw_tile(grid, x0 + _x, y0 + _y, t_data.text[i], t_data.text_col, t_data.bg_col, NULL);
+			_x++;
+		}
+
+		// Gap after text
+		gap = x1-x0-_x + 1;
+		while (gap != 0)
+		{
+			if(_y >= 0 && !(y0 + max(0, _y) > y1)) // do not render if tiles have been "scrolled" out of view - or if the text overflows
+				tl_draw_tile(grid, x0 + _x, y0 + _y, 0, t_data.text_col, t_data.bg_col, NULL);
+			gap--;
+			_x++;
+		}
+	
+		// Gap below text
+		for (uint y = max(_y + 1, y0); y + y0 <= y1; y++)
+			for (uint x = 0; x + x0 <= x1; x++)
+				tl_draw_tile(grid, x0 + x, y0 + y, 0, t_data.text_col, t_data.bg_col, NULL);
+
+		printf("\nScroll_offset: %u >> %u >> %u", container->scroll_offset, total_text_len, max((int)total_text_len - (int)(y1-y0), 0));
+
+		uint max_scroll = max((int)total_text_len - (int)(y1-y0), 0);
+		container->scroll_offset = umin(container->scroll_offset, max_scroll);
+
+		draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1, max_scroll);
+		return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
+	}
+	else if(c_type == SUBGRID)
+	{
+		Subgrid_data_t *subg_data = ascui_get_subgrid_data(*container);
+		tl_fit_subgrid(grid, subg_data->subgrid, x0, y0, x1, y1);
+		draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1, 0);
+	}
+	else return 0;
 }
 
 void ascui_draw_ui(Grid_t *grid, Container_t *top_container, Cursor_t *cursor)
@@ -453,7 +417,7 @@ void ascui_draw_ui(Grid_t *grid, Container_t *top_container, Cursor_t *cursor)
 
 	Pos_t grid_size = tl_grid_get_size(grid);
 	Container_data_t c_data = *ascui_get_container_data(*top_container);
-	ascui_draw_container(grid, top_container, 0, 0, grid_size.x - 1, grid_size.y - 1, c_data.orientation, cursor);
+	ascui_draw_container(grid, top_container, 0, 0, grid_size.x - 1, grid_size.y - 1, c_data.orientation, cursor, top_container->scroll_offset);
 }
 
 static Container_t create_container_stub(bool open, Size_Type_e s_type, uint size, Container_Type_e c_type)

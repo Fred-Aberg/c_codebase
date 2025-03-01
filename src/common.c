@@ -1,16 +1,16 @@
 #include "common.h"
 
-uint umin(uint a, uint b)
+uint_t umin(uint_t a, uint_t b)
 {
 	return (a < b)? a : b;
 }
 
-uint umax(uint a, uint b)
+uint_t umax(uint_t a, uint_t b)
 {
 	return (a < b)? b : a;
 }
 
-uint uclamp(uint minv, uint x, uint maxv)
+uint_t uclamp(uint_t minv, uint_t x, uint_t maxv)
 {
 	return umin(maxv, umax(minv, x));
 }

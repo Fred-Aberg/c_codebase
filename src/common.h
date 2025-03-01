@@ -1,23 +1,25 @@
 #pragma once
 #include "stdlib.h"
 
-typedef unsigned int uint;
-typedef unsigned char uchar;
+typedef unsigned char uchar_t;
+typedef unsigned short ushort_t;
+typedef unsigned int uint_t;
+typedef unsigned long ulong_t;
 
 typedef struct
 {
-    uint x;
-    uint y;
+    uint_t x;
+    uint_t y;
 } Pos_t;
 
 #define c(r, g, b) (Color){r, g, b, 255}
 #define pos(x, y) (Pos_t){x, y}
 
-uint umin(uint a, uint b);
+uint_t umin(uint_t a, uint_t b);
 
-uint umax(uint a, uint b);
+uint_t umax(uint_t a, uint_t b);
 
-uint uclamp(uint min, uint x, uint max);
+uint_t uclamp(uint_t min, uint_t x, uint_t max);
 
 int min(int a, int b);
 

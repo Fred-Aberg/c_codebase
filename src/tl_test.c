@@ -13,7 +13,7 @@
 int main(){
    	int screensize_x = 0;
 	int screensize_y = 0;
-	uint tile_width = 0;
+	uint_t tile_width = 0;
 	char input[50];
  
    	printf("Screen width:\n");
@@ -58,7 +58,7 @@ int main(){
 
 	// Subgrid
 	Pos_t main_grid_size = tl_grid_get_size(main_grid);
-	uint sub_tile_size = tile_width/2;
+	uint_t sub_tile_size = tile_width/2;
 	
 	// Grid_t *sub_grid = tl_init_grid(0, 0, screensize_x, screensize_y, sub_tile_size, 1.0f, CALCULATE_MAX_TILES, DEF_COLOR, &square_font);
 	// tl_fit_subgrid(main_grid, sub_grid, main_grid_size.x / 2, main_grid_size.y / 3, main_grid_size.x - 2, main_grid_size.y - 2);
@@ -79,13 +79,13 @@ int main(){
 
     	if(IsKeyDown(45))
 		{
-			uint new_tile_size = (*active_grid)->tile_width + 1;
+			uint_t new_tile_size = (*active_grid)->tile_width + 1;
 			tl_resize_grid(*active_grid, 0, 0, screensize_x, screensize_y, new_tile_size);
 			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}
 		else if(IsKeyDown(47))
 		{
-			uint new_tile_size = (*active_grid)->tile_width - 1;
+			uint_t new_tile_size = (*active_grid)->tile_width - 1;
 			tl_resize_grid(*active_grid, 0, 0, screensize_x, screensize_y, new_tile_size);
 			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}

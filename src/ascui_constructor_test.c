@@ -18,7 +18,7 @@ void dropdown_button(void *domain, void *function_data, Cursor_t *cursor)
 int main(){
    	int screensize_x = 0;
 	int screensize_y = 0;
-	uint tile_width = 0;
+	uint_t tile_width = 0;
 	char input[50];
  
    	printf("Screen width:\n");
@@ -77,13 +77,13 @@ int main(){
 
 		if(IsKeyDown(45))
 		{
-			uint new_tile_size = main_grid->tile_width + 1;
+			uint_t new_tile_size = main_grid->tile_width + 1;
 			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, new_tile_size);
 			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}
 		else if(IsKeyDown(47))
 		{
-			uint new_tile_size = main_grid->tile_width - 1;
+			uint_t new_tile_size = main_grid->tile_width - 1;
 			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, new_tile_size);
 			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}

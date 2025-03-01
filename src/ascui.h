@@ -78,16 +78,6 @@ typedef struct
 	Grid_t *subgrid;
 }Subgrid_data_t;
 
-typedef int (*UI_side_effect_func)(void *domain, void *type_data, KeyboardKey input);
-
-typedef struct
-{
-	uint text_len;
-	char *text;
-	UI_side_effect_func *side_effect_func;
-	Container_style_t style;
-}Button_data_t;
-
 typedef struct
 {
     bool right_button_pressed; 
@@ -97,6 +87,35 @@ typedef struct
     Container_t *selected_container;
     float scroll;
 } Cursor_t;
+
+typedef void (*UI_side_effect_func)(void *domain, void *function_data, Cursor_t *cursor);
+
+typedef struct
+{
+	uint text_len;
+	char *text;
+	UI_side_effect_func side_effect_func;
+	void *domain;
+	void *function_data;
+	Container_style_t style;
+}Button_data_t;
+
+#define TAG_MAX_LEN 64
+typedef struct
+{
+	char tag[TAG_MAX_LEN];
+	Container_t *container;
+}Container_tag_t;
+
+# define REALLOC_PERCENTAGE_INCREASE 1.5f
+typedef struct
+{
+	Container_tag_t *tags;
+	uint capacity;
+	uint count;
+}Container_tag_list_t;
+
+
 
 void ascui_draw_ui(Grid_t *grid, Container_t *top_container, Cursor_t *cursor);
 
@@ -118,6 +137,31 @@ Container_t ascui_create_subgrid(bool open, Size_Type_e s_type, uint size, Grid_
 
 Subgrid_data_t *ascui_get_subgrid_data(Container_t container);
 
-Container_t *ascui_get_nth_subcontainer(Container_t container, uint n);
+Button_data_t *ascui_get_button_data(Container_t container);
+
+Container_t ascui_create_button(bool open, Size_Type_e s_type, uint size, 
+								Container_style_t style, UI_side_effect_func side_effect_func, uint text_len, char *text, void *domain, void *function_data);
 
 void ascui_set_nth_subcontainer(Container_t container, uint n, Container_t subcontainer);
+
+Container_t *ascui_get_nth_subcontainer(Container_t container, uint n);
+
+void ascui_print_ui(Container_t container);
+
+void ascui_destroy(Container_t container);
+
+// Tag list //
+
+Container_tag_list_t ascui_tag_list_create(uint init_capacity);
+
+void ascui_tag_list_add(Container_tag_list_t *list, Container_t *container, char *tag);
+
+Container_t *ascui_tag_list_get(Container_tag_list_t list, char *tag);
+
+void ascui_tag_list_destroy(Container_tag_list_t list);
+
+void ascui_tag_list_print(Container_tag_list_t list);
+
+// UI Constructor //
+
+Container_t *ascui_construct_ui_from_file(char *ui_file_path, Container_tag_list_t *tag_list);

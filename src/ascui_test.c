@@ -10,6 +10,14 @@
 #define MIN(a, b) (a < b)? a : b
 #define MAX(a, b) (a < b)? b : a
 
+void dropdown_button(void *domain, void *function_data, Cursor_t *cursor)
+{
+	if (!cursor->left_button_pressed)
+		return;
+	Container_t *container = (Container_t *)domain; 
+	container->open = !container->open;
+}
+
 int main(){
    	int screensize_x = 0;
 	int screensize_y = 0;
@@ -46,7 +54,7 @@ int main(){
 	
 
 
-    InitWindow(screensize_x, screensize_y, "tl_test");
+    InitWindow(screensize_x, screensize_y, "ascui_test");
     Font square_font = LoadFontEx("Resources/Fonts/Ac437_TridentEarly_8x8.ttf", 32, 0, 252);
     SetTargetFPS(60);
     HideCursor();
@@ -61,15 +69,22 @@ int main(){
 	Container_t top_container = ascui_create_container(true, PERCENTAGE, 100, VERTICAL, 2);
 	// Container_t top_container = ascui_create_box(true, PERCENTAGE, 100, VERTICAL, 2, style1);
 	
-	ascui_set_nth_subcontainer(top_container, 0, ascui_create_box(true, PERCENTAGE, 50, HORIZONTAL, 4, style2));
+	ascui_set_nth_subcontainer(top_container, 0, ascui_create_container(true, PERCENTAGE, 50, HORIZONTAL, 2));
 	ascui_set_nth_subcontainer(top_container, 1, ascui_create_container(true, PERCENTAGE, 50, HORIZONTAL, 0));
-
-	Container_t *left_box = ascui_get_nth_subcontainer(top_container, 0);
 	
-	ascui_set_nth_subcontainer(*left_box, 1, ascui_create_box(true, TILES, 20, HORIZONTAL, 1, style1));
-	ascui_set_nth_subcontainer(*left_box, 0, ascui_create_box(true, TILES, 20, HORIZONTAL, 2, style2));
-	ascui_set_nth_subcontainer(*left_box, 2, ascui_create_box(true, TILES, 20, HORIZONTAL, 3, style2));
-	ascui_set_nth_subcontainer(*left_box, 3, ascui_create_box(true, TILES, 20, HORIZONTAL, 4, style1));
+	Container_t *left_container = ascui_get_nth_subcontainer(top_container, 0);
+
+	ascui_set_nth_subcontainer(*left_container, 1, ascui_create_box(true, PERCENTAGE, 90, HORIZONTAL, 4, style2));
+	Container_t *left_box = ascui_get_nth_subcontainer(*left_container, 1);
+	
+	char *button_text = "Texts > but it's really long like the boxes - they need to drop down funky-style.";
+	ascui_set_nth_subcontainer(*left_container, 0, ascui_create_button(true, TILES, 2, style1, dropdown_button, strlen(button_text), button_text, left_box, NULL));
+	
+	
+	ascui_set_nth_subcontainer(*left_box, 0, ascui_create_box(true, PERCENTAGE, 50, HORIZONTAL, 1, style1));
+	ascui_set_nth_subcontainer(*left_box, 1, ascui_create_box(true, PERCENTAGE, 50, HORIZONTAL, 1, style2));
+	ascui_set_nth_subcontainer(*left_box, 2, ascui_create_box(true, PERCENTAGE, 50, HORIZONTAL, 1, style2));
+	ascui_set_nth_subcontainer(*left_box, 3, ascui_create_box(true, PERCENTAGE, 50, HORIZONTAL, 1, style1));
 	
 	Container_t *first_box = ascui_get_nth_subcontainer(*left_box, 0);
 	Container_t *second_box = ascui_get_nth_subcontainer(*left_box, 1);
@@ -99,6 +114,8 @@ int main(){
 	
 
 	Cursor_t cursor; 
+
+	ascui_print_ui(top_container);
 	
     while (!WindowShouldClose()){
 		Pos_t mouse_scr_pos = pos(GetMouseX(), GetMouseY());
@@ -144,11 +161,17 @@ int main(){
 		ascui_draw_ui(main_grid, &top_container, &cursor);
 		if(cursor.selected_container != NULL)
 		{
-			if (!(cursor.scroll > 0 && cursor.selected_container->scroll_offset == 0))
+			if (cursor.selected_container->container_type == BUTTON)
+			{
+				Button_data_t *bt_data = ascui_get_button_data(*cursor.selected_container);
+				bt_data->side_effect_func(bt_data->domain, bt_data->function_data, &cursor);
+			}
+			else if (!(cursor.scroll > 0 && cursor.selected_container->scroll_offset == 0))
 				cursor.selected_container->scroll_offset -= cursor.scroll;
+				
 		}
 
-		printf("\n%p", cursor.selected_container);
+		// printf("\n%p - SO: %u", cursor.selected_container, cursor.selected_container->scroll_offset);
 	
 		tl_draw_tile(main_grid, mouse_grid_pos.x, mouse_grid_pos.y, 'A', WHITE, DEF_COLOR, &square_font);
 		
@@ -174,6 +197,7 @@ int main(){
     }
     UnloadFont(square_font);
     CloseWindow();
+    ascui_destroy(top_container);
 	tl_deinit_grid(main_grid);
     return 0;
 }

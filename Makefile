@@ -19,9 +19,15 @@ tl_test: _tl_test
 	./bin/tl_test
 
 _ascui_test:
-	gcc src/ascui_test.c src/ascui.c src/raytiles.c src/common.c -g -lc -lm -lraylib -I /usr/local/include -o bin/ascui_test
+	gcc src/ascui_test.c src/ascui.c src/texts.c src/raytiles.c src/common.c -g -lc -lm -lraylib -I /usr/local/include -o bin/ascui_test
 ascui_test: _ascui_test
 	./bin/ascui_test
+
+_ascui_constructor_test:
+	gcc src/ascui_constructor_test.c src/ascui.c src/texts.c src/raytiles.c src/common.c -g -lc -lm -lraylib -I /usr/local/include -o bin/ascui_constructor_test
+ascui_constructor_test: _ascui_constructor_test
+	./bin/ascui_constructor_test
+
 
 CC=gcc
 CFLAGS= -Wall -g -lc -lm -lraylib -I /usr/local/include

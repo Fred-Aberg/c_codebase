@@ -25,6 +25,7 @@ typedef struct
     uint_t max_tile_count;
     float tile_h_to_w_ratio;
 	float txt_padding_percentage;
+	float font_size_multiplier;
     Color default_col;
     Font *default_font;
 

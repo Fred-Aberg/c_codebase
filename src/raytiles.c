@@ -43,6 +43,7 @@ Grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_s
     grid->on_scr_size_y = on_scr_size_y;
 	grid->tile_width = tile_width;
 	grid->tile_h_to_w_ratio = tile_h_to_w_ratio;
+	grid->txt_padding_percentage = 0.15f;  // 15% padding by default
 	grid->max_tile_count = max_tile_count;
     grid->default_col = def_col;
     grid->default_font = def_font;
@@ -90,7 +91,7 @@ void tl_render_grid(Grid_t *grid)
 								 
             if (tile.symbol != 0 && tile.char_col.a != 0)
             {
-            	int txt_padding = grid->tile_width * 0.15f; // 15% padding
+            	int txt_padding = grid->tile_width * grid->txt_padding_percentage;
                 tile_font = (tile.font != NULL)? tile.font : grid->default_font;
                 DrawTextCodepoint(*tile_font, tile.symbol, (Vector2){txt_padding + grid->offset_x + pos.x * grid->tile_width, 
                 					grid->offset_y + pos.y * tile_height}, grid->tile_width, tile.char_col);
@@ -262,4 +263,9 @@ void tl_tile_invert_colors(Grid_t *grid, uint_t x, uint_t y)
     Color tmp = tile->bg_col;
     tile->bg_col = tile->char_col;
     tile->char_col = tmp;
+}
+
+void tl_grid_set_txt_padding(Grid_t *grid, float pp)
+{
+	grid->txt_padding_percentage = pp;
 }

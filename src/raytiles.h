@@ -24,6 +24,7 @@ typedef struct
     uint_t tile_width;
     uint_t max_tile_count;
     float tile_h_to_w_ratio;
+	float txt_padding_percentage;
     Color default_col;
     Font *default_font;
 
@@ -62,5 +63,7 @@ void tl_set_tile_bg(Grid_t *grid, uint_t x, uint_t y, Color bg_col);
 void tl_set_tile_char_col(Grid_t *grid, uint_t x, uint_t y, Color char_col);
 
 void tl_tile_invert_colors(Grid_t *grid, uint_t x, uint_t y);
+
+void tl_grid_set_txt_padding(Grid_t *grid, float pp);
 
 

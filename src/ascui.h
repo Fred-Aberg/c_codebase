@@ -31,7 +31,9 @@ typedef enum
 	BOX,
 	TEXT,
 	SUBGRID,
-	BUTTON
+	BUTTON,
+	DISPLAY,
+	INPUT_FIELD
 }Container_Type_e;
 
 typedef enum
@@ -78,13 +80,33 @@ typedef struct
 	Grid_t *subgrid;
 }Subgrid_data_t;
 
+typedef enum
+{
+	STR,
+	SIGNED_INT,
+	UNSIGNED_INT,
+	SIGNED_SHORT,
+	UNSIGNED_SHORT,
+	SIGNED_CHAR,
+	UNSIGNED_CHAR,
+}Input_field_type_e;
+
+typedef struct
+{
+	Input_field_type_e type;
+	char buf[64];
+	void *var;
+}Input_field_data_t;
+
 typedef struct
 {
     bool right_button_pressed; 
     bool left_button_pressed; 
+    bool middle_button_pressed; 
     uint_t x;
     uint_t y;
     Container_t *selected_container;
+    Container_t *hovered_container;
     float scroll;
 } Cursor_t;
 

@@ -15,18 +15,18 @@
 
 static void draw_cursor_selection(Grid_t *grid, Cursor_t *cursor, Container_t *container, uint_t x0, uint_t y0, uint_t x1, uint_t y1, uint_t max_scroll)
 {
-	if(cursor->selected_container != container) return;
+	if(cursor->hovered_container != container && cursor->selected_container != container) return;
 	if (container->container_type == BOX || container->container_type == CONTAINER)
 	{
 		for (uint_t x = x0; x <= x1; x++)
 		{
-			tl_set_tile_bg(grid, x, y0, WHITE);
-			tl_set_tile_bg(grid, x, y1, WHITE);
+			tl_tile_invert_colors(grid, x, y0);
+			tl_tile_invert_colors(grid, x, y1);
 		}
 		for (uint_t y = y0 + 1; y < y1; y++)
 		{
-			tl_set_tile_bg(grid, x0, y, WHITE);
-			tl_set_tile_bg(grid, x1, y, WHITE);
+			tl_tile_invert_colors(grid, x0, y);
+			tl_tile_invert_colors(grid, x1, y);
 		}
 	}
 	else
@@ -35,28 +35,28 @@ static void draw_cursor_selection(Grid_t *grid, Cursor_t *cursor, Container_t *c
 		{
 			for (uint_t y = y0; y <= y1; y++)
 			{
-				tl_set_tile_bg(grid, x, y, WHITE);
+				tl_tile_invert_colors(grid, x, y);
 			}
 		}
 	}
 
 	if(container->container_type == BOX || container->container_type == CONTAINER)
 	{
-		tl_set_tile_bg(grid, x0, y0 + (y1-y0) * ((float)container->scroll_offset / (float)max_scroll), BLACK);
-	}
-	if(cursor->scroll != 0 && max_scroll != 0)
-	{
 		if(get_orientation(container) == HORIZONTAL)
 			tl_set_tile_bg(grid, x0, y0 + (y1-y0) * ((float)container->scroll_offset / (float)max_scroll), BLACK);
 		else
 			tl_set_tile_bg(grid, x0 + (x1-x0) * ((float)container->scroll_offset / (float)max_scroll), y0, BLACK);
 	}
+	if(cursor->scroll != 0 && max_scroll != 0)
+	{
+		tl_set_tile_bg(grid, x0, y0 + (y1-y0) * ((float)container->scroll_offset / (float)max_scroll), BLACK);
+	}
 }
 
-static void check_cursor_selection(Cursor_t *cursor, Container_t *container, uint_t x0, int y0, uint_t x1, int y1)
+static void check_cursor_hover(Cursor_t *cursor, Container_t *container, uint_t x0, int y0, uint_t x1, int y1)
 {		
 	if(x0 <= cursor->x && x1 >= cursor->x && y0 <= (int)cursor->y && y1 >= (int)cursor->y)
-		cursor->selected_container = container;
+		cursor->hovered_container = container;
 }
 
 static void draw_box(Grid_t *grid, Container_style_t style, uint_t x0, uint_t y0, uint_t x1, uint_t y1)
@@ -172,7 +172,7 @@ static uint_t ascui_draw_container(Grid_t *grid, Container_t *container, uint_t 
 	if (x1 <= x0 || y1 <= y0)
 		return 0;
 
-	check_cursor_selection(cursor, container, x0, y0 , x1, y1);		
+	check_cursor_hover(cursor, container, x0, y0 , x1, y1);		
 
 	float percentage;
 	uint_t sub_x0;
@@ -360,7 +360,6 @@ static uint_t ascui_draw_container(Grid_t *grid, Container_t *container, uint_t 
 		Text_data_t t_data = *ascui_get_text_data(*container);
 		
 		uint_t _x = 0;
-		container->scroll_offset = container->scroll_offset;
 		int _y = - container->scroll_offset; // = 0 at no scroll
 		uint_t total_text_len = 0;
 		
@@ -410,8 +409,8 @@ static uint_t ascui_draw_container(Grid_t *grid, Container_t *container, uint_t 
 			draw_cursor_selection(grid, cursor, container, x0, y0, x1, total_text_len, max_scroll);
 			return (parent_orientation == VERTICAL)? x1-x0 + 1 : total_text_len;
 		}
-		else // Gap below text
-			tl_draw_rect(grid, x0, max(_y + 1, y0), x1-x0, y1-max(_y + 1, y0), 0, t_data.text_col, t_data.bg_col, NULL);
+		else if(y0 + _y < y1)	// Gap below text
+			tl_draw_rect(grid, x0, max((int)y0 + _y + 1, y0), x1-x0, y1-max(_y + 1, y0), 0, t_data.text_col, t_data.bg_col, NULL);
 			
 		uint_t max_scroll = max((int)total_text_len - (int)(y1-y0), 0);
 		container->scroll_offset = umin(container->scroll_offset, max_scroll);
@@ -422,8 +421,10 @@ static uint_t ascui_draw_container(Grid_t *grid, Container_t *container, uint_t 
 	else if(c_type == SUBGRID)
 	{
 		Subgrid_data_t *subg_data = ascui_get_subgrid_data(*container);
+		if(cursor->hovered_container == container)
+			subg_data->subgrid->tile_width -= cursor->scroll;	// "Suggest" new tile width
 		tl_fit_subgrid(grid, subg_data->subgrid, x0, y0, x1, y1);
-		draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1, 0);
+		// draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1, 0);
 	}
 	else if(c_type == BUTTON)
 	{
@@ -484,7 +485,7 @@ static uint_t ascui_draw_container(Grid_t *grid, Container_t *container, uint_t 
 
 void ascui_draw_ui(Grid_t *grid, Container_t *top_container, Cursor_t *cursor)
 {
-	cursor->selected_container = NULL; // Reset selected container
+	cursor->hovered_container = NULL; // Reset selected container
 
 	Pos_t grid_size = tl_grid_get_size(grid);
 	Container_data_t c_data = *ascui_get_container_data(*top_container);
@@ -761,7 +762,7 @@ void ascui_tag_list_add(Container_tag_list_t *list, Container_t *container, char
 {
 	assert(strlen(tag) <= TAG_MAX_LEN);
 
-	if (list->capacity < list->count)
+	if (list->capacity <= list->count)
 	{
 		list->capacity *= REALLOC_PERCENTAGE_INCREASE; 
 		list->tags = (Container_tag_t *)realloc(list->tags, (list->capacity * sizeof(Container_tag_t)));
@@ -1245,6 +1246,165 @@ void parse_text(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_pa
 	if (tag[0] != 0)
 		ascui_tag_list_add(tag_list, new_container_ptr, tag);
 }
+
+
+void parse_button(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_parent, 
+						Container_tag_list_t *tag_list, Container_style_t style_list[MAX_STYLES])
+{
+	char tag[TAG_MAX_LEN];
+	tag[0] = 0;
+	char txt[MAX_LINE_LEN];
+	txt[0] = 0;
+
+	int txt_index = -1;
+	
+	bool open = true;
+	Size_Type_e s_type = TILES;
+	uint_t size = 0;
+	Container_style_t style = style_list[0]; // 0 as default
+
+	char *tok;
+	
+	while ((tok = strtok(NULL , DELIMITATORS)))
+	{
+		if (*tok == COMMENT) // Comment reached
+			break;
+	
+		switch (*tok)
+		{
+			case PARAM_TILES:
+				s_type = TILES;
+				size = atoi(&tok[2]);
+				break;
+			case PARAM_PERCENTAGE:
+				s_type = PERCENTAGE;
+				size = atoi(&tok[2]);
+				break;
+			case PARAM_GROW:
+				s_type = GROW;
+				break;
+			case FLAG_VERTICAL:
+				WARNINGF("\nContainer-parsing error: button does not need orientation - at line %u.", i)
+				break;
+			case FLAG_HORIZONTAL:
+				WARNINGF("\nContainer-parsing error: button does not need orientation - at line %u.", i)
+				break;
+			case PARAM_STYLE:
+				style = style_list[atoi(&tok[2])]; // defaults to $:0 on error
+				break;
+			case PARAM_TAG:
+				strcpy(tag, &tok[1]);
+				break;
+			case FLAG_CLOSED:
+				open = false;
+				break;
+			case PARAM_TEXT:
+				if(tok[1] == ASSIGNMENT) // take text as parameter
+				{
+					strcpy(txt, &tok[2]);
+					replace_underscores(txt);
+				}
+				else if (tok[1] == REFERENCE) // treat parameter as index - read text from texts-list
+					txt_index = atoi(&tok[2]);
+				break;
+			default:
+				ERRORF("\nContainer-parsing error: unknown argument at line %u.", i)
+		}
+	}
+	
+
+	Container_t new_container;
+
+	if(txt_index == -1) // Text from parameter
+	 	new_container = ascui_create_button(open, s_type, size, style, NULL, strlen(txt), txt, NULL, NULL);
+	else 				// Text from texts[txt_index]
+	 	new_container = ascui_create_button(open, s_type, size, style, NULL, strlen(texts[txt_index]), texts[txt_index], NULL, NULL);
+
+	uint_t index = insert_child_container_into_parent(new_container, c_parent);
+	Container_t *new_container_ptr = ascui_get_nth_subcontainer(*c_parent, index);
+	
+	if (tag[0] != 0)
+		ascui_tag_list_add(tag_list, new_container_ptr, tag);
+}
+
+void parse_subgrid(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_parent, 
+						Container_tag_list_t *tag_list, Container_style_t style_list[MAX_STYLES])
+{
+	char tag[TAG_MAX_LEN];
+	tag[0] = 0;
+	char txt[MAX_LINE_LEN];
+	txt[0] = 0;
+
+	int txt_index = -1;
+	
+	bool open = true;
+	Size_Type_e s_type = TILES;
+	uint_t size = 0;
+	Container_style_t style = style_list[0]; // 0 as default
+	float tile_h_to_w_ratio = 1.0f;
+	uint_t width = 10;
+	uint_t max_tile_count = 1800;
+	char *tok;
+	
+	while ((tok = strtok(NULL , DELIMITATORS)))
+	{
+		if (*tok == COMMENT) // Comment reached
+			break;
+	
+		switch (*tok)
+		{
+			case PARAM_TILES:
+				s_type = TILES;
+				size = atoi(&tok[2]);
+				break;
+			case PARAM_PERCENTAGE:
+				s_type = PERCENTAGE;
+				size = atoi(&tok[2]);
+				break;			
+			case 'r':
+				tile_h_to_w_ratio = atof(&tok[2]);
+				break;
+			case 'w':
+				width = atoi(&tok[2]);
+				break;
+			case 'M':
+				max_tile_count = atoi(&tok[2]);
+				break;
+			case PARAM_GROW:
+				s_type = GROW;
+				break;
+			case FLAG_VERTICAL:
+				WARNINGF("\nContainer-parsing error: subgrid does not need orientation - at line %u.", i)
+				break;
+			case FLAG_HORIZONTAL:
+				WARNINGF("\nContainer-parsing error: subgrid does not need orientation - at line %u.", i)
+				break;
+			case PARAM_STYLE:
+				WARNINGF("\nContainer-parsing error: subgrid does not need style - at line %u.", i)
+				break;
+			case PARAM_TAG:
+				strcpy(tag, &tok[1]);
+				break;
+			case FLAG_CLOSED:
+				open = false;
+				break;
+			case PARAM_TEXT:
+				WARNINGF("\nContainer-parsing error: subgrid does not need text - at line %u.", i)
+				break;
+			default:
+				ERRORF("\nContainer-parsing error: unknown argument at line %u.", i)
+		}
+	}
+	
+	Grid_t *subgrid = tl_init_grid(0,0,0,0, width, tile_h_to_w_ratio, max_tile_count, c(0,0,0), NULL);
+	Container_t new_container = ascui_create_subgrid(open, s_type, size, subgrid, c(0,0,0), NULL);
+
+	uint_t index = insert_child_container_into_parent(new_container, c_parent);
+	Container_t *new_container_ptr = ascui_get_nth_subcontainer(*c_parent, index);
+	
+	if (tag[0] != 0)
+		ascui_tag_list_add(tag_list, new_container_ptr, tag);
+}
 void parse_container_tree(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_parent, 
 						Container_tag_list_t *tag_list, Container_style_t style_list[MAX_STYLES])
 {
@@ -1259,11 +1419,11 @@ void parse_container_tree(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Contain
 	else if (strcmp(type_str, "container") == 0)
 		parse_container(ui_file, i, c_parent, tag_list, style_list);
 	else if (strcmp(type_str, "button") == 0)
-		ERROR("\nContainer-parsing error: button parsing not implemented")
+		parse_button(ui_file, i, c_parent, tag_list, style_list);
 	else if (strcmp(type_str, "text") == 0)
 		parse_text(ui_file, i, c_parent, tag_list, style_list);
 	else if (strcmp(type_str, "subgrid") == 0) 
-		ERROR("\nContainer-parsing error: subgrid parsing not implemented")
+		parse_subgrid(ui_file, i, c_parent, tag_list, style_list);
 	else ERRORF("\nContainer-parsing error: unknown container type at line %u.", i)
 	
 	

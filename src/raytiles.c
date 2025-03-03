@@ -249,3 +249,17 @@ void tl_set_tile_bg(Grid_t *grid, uint_t x, uint_t y, Color bg_col)
     Tile_t *tile = get_tile(grid, x, y);
     tile->bg_col = bg_col;
 }
+
+void tl_set_tile_char_col(Grid_t *grid, uint_t x, uint_t y, Color char_col)
+{
+    Tile_t *tile = get_tile(grid, x, y);
+    tile->char_col = char_col;
+}
+
+void tl_tile_invert_colors(Grid_t *grid, uint_t x, uint_t y)
+{
+	Tile_t *tile = get_tile(grid, x, y);
+    Color tmp = tile->bg_col;
+    tile->bg_col = tile->char_col;
+    tile->char_col = tmp;
+}

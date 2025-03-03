@@ -59,4 +59,8 @@ Pos_t tl_screen_to_grid_coords(Grid_t *grid, Pos_t xy);
 
 void tl_set_tile_bg(Grid_t *grid, uint_t x, uint_t y, Color bg_col);
 
+void tl_set_tile_char_col(Grid_t *grid, uint_t x, uint_t y, Color char_col);
+
+void tl_tile_invert_colors(Grid_t *grid, uint_t x, uint_t y);
+
 

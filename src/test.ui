@@ -1,23 +1,16 @@
 $0 [0,0,0] [180,0,180] [20,20,20] = | +
 $1 [20,5,20] [90,20,90] [255,255,255] ~ I O
-$2 [20,200,20] [100,200,100] [0,0,0] X X 0
-H
-C:box V $:0 #t0 / Comment
-	C:text T=5 $:2 t=Walluh
-	C:box H $:1 #t1 / Comment
-		C:text T=5 $:2 t=Hallooo #t2
-		C:text T=5 $:2 t:0 #t3
-		C:text T=5 $:2 t:1 #t4
-		C:text T=5 $:2 t=Pribjaet #t5
-		C:text T=5 $:2 t:1 #t6
-		C:text T=5 $:2 t:1
-/	C:box H %=75 $:1
-/		C:text T=3 $:1 t=Cuck_Menu_>>
-/		C:box H %=80 $:0
-/			C:text G $:1 t:0
-/			C:text G $:2 t:1
-/			C:text G $:1 t:0
-/			C:text G $:2 t:1
-/	C:container
-/		C:text T=20 $:1 t:0
-/
+$2 [20,5,20] [90,20,90] [200,100,200] ~ I O
+$3 [10,2,10] [90,20,90] [150,75,150] ~ I O
+V
+/C:box V $:0
+C:box H %=30 $:1
+	C:text T=2 $:2 t=Tool_Box
+	C:button $:3 t=Water
+	C:button T=3 $:3 t=Land
+	C:button T=3 $:3 t=Hills
+	C:button T=3 $:3 t=Bleh
+	C:button T=3 $:3 t=Land
+	C:button T=3 $:3 t=Land
+	C:button T=3 $:3 t=Land
+C:subgrid w=25 M=2000 r=1.0 #map_view

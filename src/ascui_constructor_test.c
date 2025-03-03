@@ -59,11 +59,16 @@ int main(){
 
 	// Main Grid
 	Grid_t *main_grid = tl_init_grid(0, 0, screensize_x, screensize_y, tile_width, 1.0f, CALCULATE_MAX_TILES, DEF_COLOR, &square_font);
-
+	Grid_t *subgrid;
 	// UI
 	Container_tag_list_t tag_list = ascui_tag_list_create(10);
 	Container_t *top_container = ascui_construct_ui_from_file("src/test.ui", &tag_list);
 
+	Container_t *subgrid_container = ascui_tag_list_get(tag_list, "map_view");
+	subgrid = ascui_get_subgrid_data(*subgrid_container)->subgrid;
+
+	subgrid->default_font = &square_font;
+	
 	Cursor_t cursor; 
 
 	ascui_tag_list_print(tag_list);
@@ -111,28 +116,41 @@ int main(){
 		tl_draw_rect(main_grid, 0,0, main_grid_size.x - 1, main_grid_size.y - 1, '.', c(20,20,20), c(0,0,0), NULL);
 
 		ascui_draw_ui(main_grid, top_container, &cursor);
-		if(cursor.selected_container != NULL)
+		if(cursor.hovered_container != NULL)
 		{
-			if (cursor.selected_container->container_type == BUTTON)
+			if (cursor.hovered_container->container_type == BUTTON)
 			{
-				Button_data_t *bt_data = ascui_get_button_data(*cursor.selected_container);
-				bt_data->side_effect_func(bt_data->domain, bt_data->function_data, &cursor);
+				Button_data_t *bt_data = ascui_get_button_data(*cursor.hovered_container);
+				if(bt_data->side_effect_func)
+					bt_data->side_effect_func(bt_data->domain, bt_data->function_data, &cursor);
 			}
-			else if (!(cursor.scroll > 0 && cursor.selected_container->scroll_offset == 0))
-				cursor.selected_container->scroll_offset -= cursor.scroll;
-				
-		}
+			else if (!(cursor.scroll > 0 && cursor.hovered_container->scroll_offset == 0))
+				cursor.hovered_container->scroll_offset -= cursor.scroll;
 
-		// printf("\n%p - SO: %u", cursor.selected_container, cursor.selected_container->scroll_offset);
-	
-		tl_draw_tile(main_grid, mouse_grid_pos.x, mouse_grid_pos.y, 'A', WHITE, DEF_COLOR, &square_font);
+			// Select
+			if(cursor.hovered_container->container_type == BUTTON && cursor.left_button_pressed)
+				cursor.selected_container = cursor.hovered_container;
+			// Deselect
+			if(cursor.hovered_container == cursor.selected_container && cursor.right_button_pressed)
+				cursor.selected_container = NULL;
+		}
+		printf("\nhov=[%p] sel[%p]", cursor.hovered_container, cursor.selected_container);
+
+		Pos_t subgrid_size = tl_grid_get_size(subgrid);
+		tl_draw_rect(subgrid, 0,0, subgrid_size.x - 1, subgrid_size.y - 1, '-', c(200, 20, 20), c(100,10,10), NULL);
+
+		if(cursor.hovered_container == subgrid_container)
+		{
+			mouse_grid_pos = tl_screen_to_grid_coords(subgrid, mouse_scr_pos);
+			tl_draw_tile(subgrid, mouse_grid_pos.x, mouse_grid_pos.y, 'A', WHITE, DEF_COLOR, &square_font);
+		}
+		else
+			tl_draw_tile(main_grid, mouse_grid_pos.x, mouse_grid_pos.y, 'A', WHITE, DEF_COLOR, &square_font);
 		
 		tl_render_grid(main_grid);
+		tl_render_grid(subgrid);
 
 
-		// Pos_t subgrid_size = tl_grid_get_size(subg_data->subgrid);
-		// tl_draw_rect(subg_data->subgrid, 0,0, subgrid_size.x - 1, subgrid_size.y - 1, '-', c(200, 20, 20), c(100,10,10), NULL);
-		// tl_render_grid(subg_data->subgrid);
 
 		char buf[50];
 		sprintf(buf, "(%u, %u)", mouse_grid_pos.x, mouse_grid_pos.y);

@@ -43,7 +43,8 @@ Grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_s
     grid->on_scr_size_y = on_scr_size_y;
 	grid->tile_width = tile_width;
 	grid->tile_h_to_w_ratio = tile_h_to_w_ratio;
-	grid->txt_padding_percentage = 0.15f;  // 15% padding by default
+	grid->txt_padding_prc_h = 0.15f;  // 15% padding by default
+	grid->txt_padding_prc_v = 0.0f;  // 0% padding by default
 	grid->font_size_multiplier = 1.0f; // 100% 
 	grid->max_tile_count = max_tile_count;
     grid->default_col = def_col;
@@ -80,11 +81,22 @@ void tl_render_grid(Grid_t *grid)
     Font *tile_font;
 
     uint_t tile_height = tile_height(grid);
+    if (tile_height != grid->tile_width)
+    {
+    	printf("\nh-w discrepancy! w=%u, h=%u", grid->tile_width, tile_height);
+    }
+
+	int txt_padding_h = grid->tile_width * grid->txt_padding_prc_h;
+    int txt_padding_v = tile_height * grid->txt_padding_prc_v;
+    int tile_pixel_x_pos;
+    int tile_pixel_y_pos;
 
     for (uint_t i = 0; i < grid_size(grid); i++)
     {
             tile = grid->tiles[i];
             pos = i_to_pos(grid, i);
+            tile_pixel_x_pos = grid->offset_x + pos.x * grid->tile_width;
+            tile_pixel_y_pos = grid->offset_y + pos.y * tile_height;
 
             if (tile.bg_col.a != 0) 
 					DrawRectangle(grid->offset_x + pos.x * grid->tile_width, grid->offset_y + pos.y * tile_height,
@@ -92,10 +104,11 @@ void tl_render_grid(Grid_t *grid)
 								 
             if (tile.symbol != 0 && tile.char_col.a != 0)
             {
-            	int txt_padding = grid->tile_width * grid->txt_padding_percentage;
-                tile_font = (tile.font != NULL)? tile.font : grid->default_font;
-                DrawTextCodepoint(*tile_font, tile.symbol, (Vector2){txt_padding + grid->offset_x + pos.x * grid->tile_width, 
-                					grid->offset_y + pos.y * tile_height}, grid->tile_width * grid->font_size_multiplier, tile.char_col);
+            	                tile_font = (tile.font != NULL)? tile.font : grid->default_font;
+                DrawTextCodepoint(*tile_font, tile.symbol, 
+                					(Vector2){max(txt_padding_h + tile_pixel_x_pos, 0), 
+                							  max(txt_padding_v + tile_pixel_y_pos, 0)}, 
+                					grid->tile_width * grid->font_size_multiplier, tile.char_col);
             }
     }
 }
@@ -268,5 +281,5 @@ void tl_tile_invert_colors(Grid_t *grid, uint_t x, uint_t y)
 
 void tl_grid_set_txt_padding(Grid_t *grid, float pp)
 {
-	grid->txt_padding_percentage = pp;
+	grid->txt_padding_prc_h = pp;
 }

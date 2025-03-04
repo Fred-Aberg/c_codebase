@@ -9,9 +9,9 @@
 
 typedef struct
 {
-    Color bg_col;
-    Color char_col;
-    char symbol;
+    Color *bg_col;
+    Color *char_col;
+    char *symbol;
     Font *font;
 }Tile_t;
 
@@ -30,7 +30,10 @@ typedef struct
     Color default_col;
     Font *default_font;
 
-    Tile_t *tiles;
+	char *symbols;
+	Color *symbol_colors;
+	Color *bg_colors;
+    Font **fonts;
 } Grid_t;
 
 Grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_size_y, 
@@ -40,7 +43,7 @@ void tl_deinit_grid(Grid_t *grid);
 
 Pos_t tl_grid_get_size(Grid_t *grid);
 
-void tl_render_grid(Grid_t *grid);
+uint_t tl_render_grid(Grid_t *grid);
 
 void tl_center_grid_on_screen(Grid_t *grid, uint_t scr_size_x, uint_t scr_size_y);
 

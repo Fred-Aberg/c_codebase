@@ -7,9 +7,6 @@
 #include "raytiles.h"
 #include "texts.h"
 
-#define ERROR(str) {fprintf(stdout, str); putc('\n', stdout); fflush(stdout); assert(false);}
-#define ERRORF(str, ...) {fprintf(stdout, str, __VA_ARGS__); putc('\n', stdout); fflush(stdout); assert(false);}
-#define WARNINGF(str, ...) {fprintf(stdout, str, __VA_ARGS__); putc('\n', stdout);}
 #define get_orientation(container) *(Container_orientation_e *)(container->container_type_data)
 
 

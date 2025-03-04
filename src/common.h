@@ -6,6 +6,11 @@ typedef unsigned short ushort_t;
 typedef unsigned int uint_t;
 typedef unsigned long ulong_t;
 
+#define ERROR(str) {fprintf(stdout, str); putc('\n', stdout); fflush(stdout); assert(false);}
+#define ERRORF(str, ...) {fprintf(stdout, str, __VA_ARGS__); putc('\n', stdout); fflush(stdout); assert(false);}
+#define WARNINGF(str, ...) {fprintf(stdout, str, __VA_ARGS__); putc('\n', stdout);}
+
+
 typedef struct
 {
     uint_t x;

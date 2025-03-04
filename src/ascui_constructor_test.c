@@ -4,6 +4,7 @@
 #include "ascui.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #define DEF_COLOR (Color){20, 40, 29, 255}
 
@@ -16,6 +17,17 @@ void dropdown_button(void *domain, void *function_data, Cursor_t *cursor)
 }
 
 int main(){
+	double tl_rendering_time;
+	double total_tl_rendering_time = 0;
+	double ascui_drawing_time;
+	double total_ascui_drawing_time = 0;
+	double frame_time;
+	double total_frame_time = 0;
+	bool show_diagnostics = false;
+	long n_draw_calls = 0;
+	long tick = 0;
+
+
    	int screensize_x = 0;
 	int screensize_y = 0;
 	uint_t tile_width = 0;
@@ -75,6 +87,9 @@ int main(){
 	ascui_print_ui(*top_container);
 	
     while (!WindowShouldClose()){
+    	tick++;
+		frame_time = -GetTime();
+    
 		Pos_t mouse_scr_pos = pos(GetMouseX(), GetMouseY());
 
         BeginDrawing();
@@ -115,7 +130,10 @@ int main(){
 		Pos_t main_grid_size = tl_grid_get_size(main_grid);
 		tl_draw_rect(main_grid, 0,0, main_grid_size.x - 1, main_grid_size.y - 1, '.', c(20,20,20), c(0,0,0), NULL);
 
+		ascui_drawing_time = -GetTime();
 		ascui_draw_ui(main_grid, top_container, &cursor);
+		ascui_drawing_time += GetTime();
+
 		if(cursor.hovered_container != NULL)
 		{
 			if (cursor.hovered_container->container_type == BUTTON)
@@ -146,23 +164,40 @@ int main(){
 		}
 		else
 			tl_draw_tile(main_grid, mouse_grid_pos.x, mouse_grid_pos.y, 'A', WHITE, DEF_COLOR, &square_font);
+
+		tl_rendering_time = -GetTime();
+		n_draw_calls = tl_render_grid(main_grid) + tl_render_grid(subgrid);
+		tl_rendering_time += GetTime();
+
+		frame_time += GetTime();
+
+		total_frame_time += frame_time;
+		total_ascui_drawing_time += ascui_drawing_time;
+		total_tl_rendering_time += tl_rendering_time;
+
+		char buf[100];
+		if(IsKeyPressed(KEY_TAB))
+			show_diagnostics = !show_diagnostics;
 		
-		tl_render_grid(main_grid);
-		tl_render_grid(subgrid);
+		if (show_diagnostics)
+		{
+			DrawRectangle(0,0, 350, 550, c(40, 10, 40));
+			sprintf(buf, "\n\tN draw calls: %li", n_draw_calls);
+			DrawText(buf, 0, 0, 24, c(255, 0, 255));
+			sprintf(buf, "\n\tframe time [ms]:\n\n\t\t%f\n\n\t\tavg: %f", frame_time * 1000.0f, (total_frame_time * 1000.0f) / (double)tick);
+			DrawText(buf, 0, 150, 24, c(255, 0, 255));
+			sprintf(buf, "\n\tascui drawing time [ms]:\n\n\t\t%f\n\n\t\tavg: %f", ascui_drawing_time * 1000.0f, (total_ascui_drawing_time * 1000.0f) / (double)tick);
+			DrawText(buf, 0, 300, 24, c(255, 0, 255));
+			sprintf(buf, "\n\ttl drawing time [ms]:\n\n\t\t%f\n\n\t\tavg: %f", tl_rendering_time * 1000.0f, (total_tl_rendering_time * 1000.0f) / (double)tick);
+			DrawText(buf, 0, 450, 24, c(255, 0, 255));
+		}
+		else
+		{
+			sprintf(buf, "(%u, %u)", mouse_grid_pos.x, mouse_grid_pos.y);
+			DrawText(buf, 0, 0, 24, c(200, 0, 200));
+	        DrawFPS(0,64);
+		}
 
-
-
-		char buf[50];
-		sprintf(buf, "(%u, %u)", mouse_grid_pos.x, mouse_grid_pos.y);
-		DrawText(buf, 0, 0, 24, c(200, 0, 200));
-
-		// int charp = GetCharPressed();
-		// int keyp = GetKeyPressed();
-// 
-		// if (charp != 0 || keyp != 0)
-			// printf("\n(c[%d], k[%d])", charp, keyp);
-		
-        DrawFPS(0,64);
         EndDrawing();
     }
     UnloadFont(square_font);

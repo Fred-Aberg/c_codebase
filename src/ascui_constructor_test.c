@@ -24,7 +24,8 @@ int main(){
 	double frame_time;
 	double total_frame_time = 0;
 	bool show_diagnostics = false;
-	long n_draw_calls = 0;
+	long n_smbl_draw_calls = 0;
+	long n_bg_draw_calls = 0;
 	long tick = 0;
 
 
@@ -63,8 +64,8 @@ int main(){
 	
 
 
-    InitWindow(screensize_x, screensize_y, "ascui_test");
-    Font square_font = LoadFontEx("Resources/Fonts/Ac437_TridentEarly_8x8.ttf", 32, 0, 252);
+    InitWindow(screensize_x, screensize_y, "ascui_constr_test");
+    Font square_font = LoadFontEx("Resources/Fonts/unscii-8-alt.ttf", 32, 0, 252);
     SetTargetFPS(60);
     HideCursor();
     SetWindowMinSize(200, 200);
@@ -128,7 +129,7 @@ int main(){
 
 
 		Pos_t main_grid_size = tl_grid_get_size(main_grid);
-		tl_draw_rect(main_grid, 0,0, main_grid_size.x - 1, main_grid_size.y - 1, '.', c(20,20,20), c(0,0,0), NULL);
+		tl_draw_rect(main_grid, 0,0, main_grid_size.x - 1, main_grid_size.y - 1, NO_SMBL, NO_COL, c(0,0,0), NULL);
 
 		ascui_drawing_time = -GetTime();
 		ascui_draw_ui(main_grid, top_container, &cursor);
@@ -155,7 +156,7 @@ int main(){
 		printf("\nhov=[%p] sel[%p]", cursor.hovered_container, cursor.selected_container);
 
 		Pos_t subgrid_size = tl_grid_get_size(subgrid);
-		tl_draw_rect(subgrid, 0,0, subgrid_size.x - 1, subgrid_size.y - 1, '-', c(200, 20, 20), c(100,10,10), NULL);
+		tl_draw_rect(subgrid, 0,0, subgrid_size.x - 1, subgrid_size.y - 1, '.', c(100, 20, 100), c(50,10,50), NULL);
 
 		if(cursor.hovered_container == subgrid_container)
 		{
@@ -166,10 +167,14 @@ int main(){
 			tl_draw_tile(main_grid, mouse_grid_pos.x, mouse_grid_pos.y, 'A', WHITE, DEF_COLOR, &square_font);
 
 		tl_rendering_time = -GetTime();
-		n_draw_calls = tl_render_grid(main_grid) + tl_render_grid(subgrid);
+		Pos_t main_grid_dcalls = tl_render_grid(main_grid);
+		Pos_t sub_grid_dcalls = tl_render_grid(subgrid);
 		tl_rendering_time += GetTime();
 
 		frame_time += GetTime();
+
+		n_bg_draw_calls = main_grid_dcalls.x + sub_grid_dcalls.x;
+		n_smbl_draw_calls = main_grid_dcalls.y + sub_grid_dcalls.y;
 
 		total_frame_time += frame_time;
 		total_ascui_drawing_time += ascui_drawing_time;
@@ -182,19 +187,21 @@ int main(){
 		if (show_diagnostics)
 		{
 			DrawRectangle(0,0, 350, 550, c(40, 10, 40));
-			sprintf(buf, "\n\tN draw calls: %li", n_draw_calls);
+			sprintf(buf, "\n\tN draw calls: %li\n\n\t = [bg:%li + smbl:%li]", n_bg_draw_calls + n_smbl_draw_calls, n_bg_draw_calls, n_smbl_draw_calls);
 			DrawText(buf, 0, 0, 24, c(255, 0, 255));
 			sprintf(buf, "\n\tframe time [ms]:\n\n\t\t%f\n\n\t\tavg: %f", frame_time * 1000.0f, (total_frame_time * 1000.0f) / (double)tick);
-			DrawText(buf, 0, 150, 24, c(255, 0, 255));
+			DrawText(buf, 0, 75, 24, c(255, 0, 255));
 			sprintf(buf, "\n\tascui drawing time [ms]:\n\n\t\t%f\n\n\t\tavg: %f", ascui_drawing_time * 1000.0f, (total_ascui_drawing_time * 1000.0f) / (double)tick);
-			DrawText(buf, 0, 300, 24, c(255, 0, 255));
+			DrawText(buf, 0, 200, 24, c(255, 0, 255));
 			sprintf(buf, "\n\ttl drawing time [ms]:\n\n\t\t%f\n\n\t\tavg: %f", tl_rendering_time * 1000.0f, (total_tl_rendering_time * 1000.0f) / (double)tick);
-			DrawText(buf, 0, 450, 24, c(255, 0, 255));
+			DrawText(buf, 0, 350, 24, c(255, 0, 255));
 		}
 		else
 		{
 			sprintf(buf, "(%u, %u)", mouse_grid_pos.x, mouse_grid_pos.y);
 			DrawText(buf, 0, 0, 24, c(200, 0, 200));
+			sprintf(buf, "(%u, %u)", mouse_scr_pos.x, mouse_scr_pos.y);
+			DrawText(buf, 0, 48, 24, c(200, 0, 200));
 	        DrawFPS(0,64);
 		}
 

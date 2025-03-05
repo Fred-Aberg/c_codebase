@@ -3,17 +3,9 @@
 #include "stdlib.h"
 #include "common.h"
 
-#define NO_BG (Color) {0,0,0,0}
+#define NO_COL (Color) {0,0,0,0}
 #define NO_SMBL 0
 #define CALCULATE_MAX_TILES 0
-
-typedef struct
-{
-    Color *bg_col;
-    Color *char_col;
-    char *symbol;
-    Font *font;
-}Tile_t;
 
 typedef struct
 {
@@ -30,7 +22,7 @@ typedef struct
     Color default_col;
     Font *default_font;
 
-	char *symbols;
+	char *symbols;			// Textures? more efficient than fonts?
 	Color *symbol_colors;
 	Color *bg_colors;
     Font **fonts;
@@ -43,7 +35,7 @@ void tl_deinit_grid(Grid_t *grid);
 
 Pos_t tl_grid_get_size(Grid_t *grid);
 
-uint_t tl_render_grid(Grid_t *grid);
+Pos_t tl_render_grid(Grid_t *grid);
 
 void tl_center_grid_on_screen(Grid_t *grid, uint_t scr_size_x, uint_t scr_size_y);
 

@@ -164,17 +164,20 @@ uint_t render_symbols(Grid_t *grid)
 	uint_t index;
 	Color c_col;
 	Font c_font;
+	char c_symbol;
+	
 	for(uint_t _y = 0; _y < height; _y++)
 	{
 		for(uint_t _x = 0; _x < width; _x++)
 		{
 			index = fast_i(width, _x, _y);
 			c_col = col_ptr[index];
-			if(symbols[index] != '\0' && c_col.a != 0)
+			c_symbol = symbols[index];
+			if(c_symbol != NO_SMBL && c_symbol != ' '  && c_col.a != 0)
 			{
 				index = fast_i(width, _x, _y);	
 				c_font = (fonts[index])? *fonts[index] : *grid->default_font;
-				DrawTextCodepoint(c_font , symbols[index],
+				DrawTextCodepoint(c_font , c_symbol,
 									(Vector2){grid->offset_x + _x * grid->tile_width, grid->offset_y + _y * tile_height},
 									grid->tile_width * grid->font_size_multiplier, c_col);
 				n_draw_calls++;
@@ -184,9 +187,9 @@ uint_t render_symbols(Grid_t *grid)
 	return n_draw_calls;
 }
 
-uint_t tl_render_grid(Grid_t *grid)
+Pos_t tl_render_grid(Grid_t *grid)
 {
-    return render_background(grid) + render_symbols(grid);
+    return pos(render_background(grid), render_symbols(grid));
 }
 
 void tl_center_grid_on_screen(Grid_t *grid, uint_t scr_size_x, uint_t scr_size_y)
@@ -208,9 +211,9 @@ void tl_resize_grid(Grid_t *grid, int new_offset_x, int new_offset_y, int new_sc
 	uint_t new_height = new_scr_size_y / new_tile_height;
 	uint_t new_size = new_width * new_height;
 	
-	printf("\nGrid resizing started: \n  w[%u -> %u]\n  [%u x %u] -> [%u x %u]\n  size[%u/%u]\n  screen: [%d x %d] -> [%d x %d]", 
-		grid->tile_width, new_tile_width, grid_width(grid), grid_height(grid), new_width, new_height, new_size, grid->max_tile_count,
-		grid->on_scr_size_x, grid->on_scr_size_y, new_scr_size_x, new_scr_size_y);
+	// printf("\nGrid resizing started: \n  w[%u -> %u]\n  [%u x %u] -> [%u x %u]\n  size[%u/%u]\n  screen: [%d x %d] -> [%d x %d]",
+		// grid->tile_width, new_tile_width, grid_width(grid), grid_height(grid), new_width, new_height, new_size, grid->max_tile_count,
+		// grid->on_scr_size_x, grid->on_scr_size_y, new_scr_size_x, new_scr_size_y);
 
 	if(new_size > grid->max_tile_count)
 	{
@@ -240,9 +243,9 @@ void tl_resize_grid(Grid_t *grid, int new_offset_x, int new_offset_y, int new_sc
 	grid->on_scr_size_y = new_scr_size_y;
 	grid->tile_width = new_tile_width;
 	
-	printf("\n  Grid Resized:\n  new tile_width: %u\n  new size: %d x %d -> %d tiles (MAX[%u]) - coords: (0-%d, 0-%d)\n",
-	    		new_tile_width, grid_width(grid), grid_height(grid), grid_size(grid), grid->max_tile_count,
-	    		grid_width(grid) - 1, grid_height(grid) - 1);
+	// printf("\n  Grid Resized:\n  new tile_width: %u\n  new size: %d x %d -> %d tiles (MAX[%u]) - coords: (0-%d, 0-%d)\n",
+	    		// new_tile_width, grid_width(grid), grid_height(grid), grid_size(grid), grid->max_tile_count,
+	    		// grid_width(grid) - 1, grid_height(grid) - 1);
 }
 
 // x0 < x1
@@ -329,10 +332,20 @@ uint_t tl_draw_text(Grid_t * grid, uint_t x, uint_t y, uint_t wrap, char *text, 
     return _y - y + 1; // Rows written
 }
 
+Pos_t rendered_grid_size(Grid_t *grid)
+{
+	return pos((grid_width(grid) - 1) * grid->tile_width, (grid_height(grid) - 1) * tile_height(grid));
+}
+
 Pos_t tl_screen_to_grid_coords(Grid_t *grid, Pos_t xy)
 {
-	xy.x = uclamp(grid->offset_x, xy.x, rendered_grid_size_x(grid)); 
-	xy.y = uclamp(grid->offset_y, xy.y, rendered_grid_size_y(grid)); 
+	Pos_t rendered_size = rendered_grid_size(grid);
+	xy.x = uclamp(grid->offset_x, xy.x, grid->offset_x + rendered_size.x);
+	xy.y = uclamp(grid->offset_y, xy.y, grid->offset_y + rendered_size.y);
+	// xy.x = uclamp(grid->offset_x, xy.x, grid->offset_x + grid->on_scr_size_x);
+	// xy.y = uclamp(grid->offset_y, xy.y, grid->offset_y + grid->on_scr_size_y);
+	// printf("\nx: %u < %u > %u \ny: %u < %u > %u\n",grid->offset_x, xy.x, grid->offset_x + grid->on_scr_size_x,
+	// grid->offset_y, xy.y, grid->offset_y + grid->on_scr_size_y);
     return pos((xy.x - grid->offset_x) / grid->tile_width, (xy.y - grid->offset_y) / tile_height(grid));
 }
 

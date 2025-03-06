@@ -6,281 +6,314 @@
 #include "string.h"
 
 #define MIN(a, b) (a < b)? a : b
-#define grid_width(grid) ((grid->on_scr_size_x) / grid->tile_width)
-#define tile_height(grid) (uint_t)(grid->tile_h_to_w_ratio * (float)grid->tile_width)
-#define grid_height(grid) ((grid->on_scr_size_y) / tile_height(grid))
+#define grid_width(grid) ((grid->on_scr_size_x) / grid->tile_p_w)		// max 255
+#define tile_pixel_height(grid) (int)(grid->tile_h_to_w_ratio * (float)grid->tile_p_w)
+#define grid_height(grid) ((grid->on_scr_size_y) / tile_pixel_height(grid))		// max 255
 #define grid_size(grid) (grid_width(grid) * grid_height(grid))
-#define rendered_grid_size_x(grid) (grid_width(grid) * grid->tile_width)
-#define rendered_grid_size_y(grid) (grid_height(grid) * tile_height(grid))
+#define rendered_grid_size_x(grid) (grid_width(grid) * grid->tile_p_w - grid->offset_x)
+#define rendered_grid_size_y(grid) (grid_height(grid) * tile_pixel_height(grid) - grid->offset_y)
 
-static uint_t pos_to_i(Grid_t *grid, uint_t x, uint_t y)
+
+typedef struct
 {
-	if(x >= grid_width(grid) && y >= grid_height(grid))
-		ERRORF("\nRAYTILES: coord overflow in pos_to_i(%u, %u)\n", x, y)
-	return x + y * grid_width(grid);
+	uchar_t g_w;
+	uchar_t g_h;
+	int t_w;
+	int t_h;
+	int offset_x;
+	int offset_y;
+	Font *g_fonts;
+	float font_size;
+}grid_rendering_data_t;
+
+void sanitize_tile_p_w(grid_t *grid)
+{
+	int g_w = grid_width(grid);
+	int g_h = grid_width(grid);
+
+	if (g_w <= MAX_GRID_W && g_h <= MAX_GRID_H)
+		return; // Valid tile_p_w
+
+	int min_p_w_x = (grid->on_scr_size_x / MAX_GRID_W) + 1;
+	int min_p_w_y = ((grid->on_scr_size_y / MAX_GRID_H) / grid->tile_h_to_w_ratio) + 1;
+
+	grid->tile_p_w = max(min_p_w_x, min_p_w_y);
 }
 
-// Convert array index of cell to cell's coordinates
-static Pos_t i_to_pos(Grid_t *grid, int i)
+// r <= 7, g <= 7, b <= 3, otherwise undefined behaviour
+color8b_t col8bt(char r, char b, char g)
 {
-    uint_t y = i / grid_width(grid); // C autimatically floors the result
-    uint_t x = i - (y * grid_width(grid));
-	return (Pos_t){.x = x, .y = y};
+	return ( r<<5 ) + ( g<<2 ) + b;
 }
 
-Grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_size_y, 
-					uint_t tile_width, float tile_h_to_w_ratio, uint_t max_tile_count, Color def_col, Font *def_font)
+const char convert_3b_to_8b[8] = {0, 32, 64, 96, 128, 160, 192, 255};
+const char convert_2b_to_8b[4] = {0, 64, 128, 255};
+
+Color tl_color8b_to_Color(color8b_t col)
 {
-    Grid_t *grid = calloc(1, sizeof(Grid_t));
+							// 1110000						00011100							00000011
+	return c(convert_3b_to_8b[(col & 224)>>5], convert_3b_to_8b[(col & 28)>>2], convert_2b_to_8b[col & 3]);
+}
+
+color8b_t tl_Color_to_color8b(Color col)
+{
+	return ( (char)(((float)col.r/255.0f) * 7.0f)<<5 ) + ( (char)(((float)col.g/255.0f) * 7.0f)<<2 ) + ( (char)(((float)col.b/255.0f) * 3.0f) );
+}
+
+grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_size_y, uint_t tile_p_w, float tile_h_to_w_ratio, 
+					Font *fonts, uint_t starting_instruction_capacity)
+{
+    grid_t *grid = calloc(1, sizeof(grid_t));
 
     grid->offset_x = offset_x;
     grid->offset_y = offset_y;
     grid->on_scr_size_x = on_scr_size_x;
     grid->on_scr_size_y = on_scr_size_y;
-	grid->tile_width = tile_width;
+	grid->tile_p_w = tile_p_w;
 	grid->tile_h_to_w_ratio = tile_h_to_w_ratio;
+
+	sanitize_tile_p_w(grid);
+	
 	grid->txt_padding_prc_h = 0.15f;  // 15% padding by default
 	grid->txt_padding_prc_v = 0.0f;  // 0% padding by default
 	grid->font_size_multiplier = 1.0f; // 100% 
-	grid->max_tile_count = max_tile_count;
-    grid->default_col = def_col;
-    grid->default_font = def_font;
 
-	// Which approach will result in fewer bugs?
-	// assert(grid_size(grid) <= max_tile_count);
-	grid->max_tile_count = umax(grid->max_tile_count, grid_size(grid));
-	
-    grid->symbols = calloc(grid->max_tile_count, sizeof(char));
-    grid->symbol_colors = calloc(grid->max_tile_count, sizeof(Color));
-    grid->bg_colors = calloc(grid->max_tile_count, sizeof(Color));
-    grid->fonts = calloc(grid->max_tile_count, sizeof(Font *));
+	grid->fonts = fonts;
 
-    fprintf(stderr, "tl_grid initialized - size: %d x %d -> %d tiles (MAX[%u]) - coords: (0-%d, 0-%d)\n",
-    		grid_width(grid), grid_height(grid), grid_size(grid), max_tile_count,
-    		grid_width(grid) - 1, grid_height(grid) - 1);
+	grid->instructions_capacity = starting_instruction_capacity;
+	grid->instructions_count = 0;
+    grid->instructions = calloc(starting_instruction_capacity, sizeof(instruction_t));
     
     return grid;
 }
 
-Pos_t tl_grid_get_size(Grid_t *grid)
+Pos_t tl_grid_get_dimensions(grid_t *grid)
 {
     return (Pos_t){.x = grid_width(grid), .y = grid_height(grid)};
 }
 
-void tl_deinit_grid(Grid_t *grid)
+void tl_deinit_grid(grid_t *grid)
 {
-    free(grid->symbols);
-    free(grid->symbol_colors);
-    free(grid->bg_colors);
-    free(grid->fonts);
+    free(grid->instructions);
     free(grid);
 }
 
-
-bool color_eq(Color a, Color b)
+void draw_rect(grid_rendering_data_t g_data, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, color8b_t bg_col)
 {
-	return (a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a);
+	DrawRectangle(g_data.offset_x + x0 * g_data.t_w, g_data.offset_y + y0 * g_data.t_h,
+				  g_data.t_w * (x1 - x0 + 1), g_data.t_h * (y1 - y0 + 1), tl_color8b_to_Color(bg_col));
 }
 
-#define fast_i(width, x, y) (x + y * width)
-#define area(x0, y0, x1, y1) (x1 - x0 + 1) * (y1 - y0 + 1)
+#define ins_type(instruction) (instruction.type_bit & 1)
+#define font_index(smbl_instruction) (int)((smbl_instruction.type_and_font_bits & 254)>>1)
 
-void draw_rect(Grid_t *grid, uint_t x0, uint_t y0, uint_t x1, uint_t y1, Color bg_col)
+uint_t render_smbl_instruction(grid_rendering_data_t g_data, smbl_instruction_t smbl_instruction)
 {
-	uint_t tile_height = tile_height(grid);
-	DrawRectangle(grid->offset_x + x0 * grid->tile_width, grid->offset_y + y0 * tile_height,
-				  grid->tile_width * (x1 - x0 + 1), tile_height * (y1 - y0 + 1), bg_col);
-}
-
-void draw_line(Grid_t *grid, uint_t x0, uint_t x1, uint_t y, Color bg_col)
-{
-	uint_t tile_height = tile_height(grid);
-	DrawRectangle(grid->offset_x + x0 * grid->tile_width, grid->offset_y + y * tile_height,
-				  grid->tile_width * (x1 - x0 + 1), tile_height * (y + 1), bg_col);
-}
-
-uint_t render_background(Grid_t *grid)
-{
-	Color *bg_ptr = grid->bg_colors;
-	uint_t width = grid_width(grid);
-	uint_t height = grid_height(grid);
-	uint_t x_max = width - 1;
-	uint_t n_draw_calls = 0;
-
-	Color c_bg;
-	Color new_bg;
-	uint_t c_bg_start_x;
-	bool same_bg;
-	
-	for(uint_t _y = 0; _y < height; _y++)
-	{
-		c_bg = bg_ptr[fast_i(width, 0, _y)];
-		c_bg_start_x = 0;
-		for(uint_t _x = 1; true; _x++)
+	uint_t draw_calls = 0;
+	for (uchar_t _y = smbl_instruction.rect.y0; _y <= smbl_instruction.rect.y1; _y++)
+		for (uchar_t _x = smbl_instruction.rect.x0; _x <= smbl_instruction.rect.x1; _x++)
 		{
-			new_bg = bg_ptr[fast_i(width, _x, _y)];
-			same_bg = color_eq(new_bg, c_bg);
-			
-			if(_x == x_max)
-			{
-				if(same_bg)
-				{
-					draw_line(grid, c_bg_start_x, x_max, _y, c_bg);
-					n_draw_calls++;
-					break;
-				}
-				else
-				{
-					draw_line(grid, c_bg_start_x, x_max - 1, _y, c_bg);
-					draw_line(grid, x_max, x_max, _y, new_bg);
-					n_draw_calls += 2;
-					break;
-				}
-			}
-			
-			if(!color_eq(new_bg, c_bg))
-			{
-				draw_line(grid, c_bg_start_x, _x - 1, _y, c_bg);
-				n_draw_calls++;
-				c_bg_start_x = _x;
-				c_bg = new_bg;
-			}
-			
+			DrawTextCodepoint(g_data.g_fonts[font_index(smbl_instruction)] , smbl_instruction.smbl,
+							(Vector2){g_data.offset_x + _x * g_data.t_w, g_data.offset_y + _y * g_data.t_h},
+							g_data.font_size, tl_color8b_to_Color(smbl_instruction.smbl_col));
+			draw_calls++;
+		}
+	return draw_calls;
+}
+
+Pos_t render_instructions(grid_t *grid)
+{
+	Pos_t draw_calls = pos(0,0);
+	
+	grid_rendering_data_t g_data =
+	{
+		grid_width(grid),
+		grid_height(grid),
+		grid->tile_p_w,
+		tile_pixel_height(grid),
+		grid->offset_x,
+		grid->offset_y,
+		grid->fonts,
+		grid->tile_p_w * grid->font_size_multiplier
+	};
+	instruction_t *instructions = grid->instructions;
+	instruction_t c_instruction;
+	
+	bg_instruction_t *bg_instruction;
+
+	for (uint_t i = 0; i < grid->instructions_count; i++)
+	{
+		c_instruction = instructions[i];
+		if(ins_type(c_instruction))
+		{
+			bg_instruction = (bg_instruction_t *)(&c_instruction);
+			draw_rect(g_data, bg_instruction->rect.x0, bg_instruction->rect.y0,  bg_instruction->rect.x1, bg_instruction->rect.y1, bg_instruction->bg_col);
+			draw_calls.x++;
+		}
+		else
+		{
+			draw_calls.y += render_smbl_instruction(g_data, *(smbl_instruction_t *)(&c_instruction));
 		}
 	}
-	return n_draw_calls;
+	
+	return draw_calls;
 }
 
-uint_t render_symbols(Grid_t *grid)
-{
-	Color *col_ptr = grid->symbol_colors;
-	char *symbols = grid->symbols;
-	Font **fonts = grid->fonts;
-	uint_t tile_height = tile_height(grid);
-	uint_t width = grid_width(grid);
-	uint_t height = grid_height(grid);
-	uint_t n_draw_calls = 0;
 
-	uint_t index;
-	Color c_col;
-	Font c_font;
-	char c_symbol;
-	
-	for(uint_t _y = 0; _y < height; _y++)
+Pos_t tl_render_grid(grid_t *grid)
+{
+	// Pos_t dcs = pos(render_background(grid), render_symbols(grid));
+	Pos_t dcs = render_instructions(grid);
+	grid->instructions_count = 0;
+    return dcs;
+}
+
+void tl_center_grid_on_screen(grid_t *grid, int scr_size_x, int scr_size_y)
+{
+	grid->offset_x = (scr_size_x - rendered_grid_size_x(grid))/2;
+	grid->offset_y = (scr_size_y - rendered_grid_size_y(grid))/2;
+}
+
+
+void tl_change_tile_pw(grid_t *grid, int pw_change)
+{
+	grid->tile_p_w += pw_change;
+	sanitize_tile_p_w(grid);
+}
+
+void tl_set_tile_pw(grid_t *grid, int new_tile_pw)
+{
+	grid->tile_p_w = new_tile_pw;
+	sanitize_tile_p_w(grid);
+}
+
+//new_tile_width = 0 -> minimum will be calculated
+void tl_resize_grid(grid_t *grid, int new_offset_x, int new_offset_y, int new_scr_size_x, int new_scr_size_y, uint_t new_tile_width)
+{
+    grid->offset_x = new_offset_x;
+    grid->offset_y = new_offset_y;
+    grid->on_scr_size_x = new_scr_size_x;
+    grid->on_scr_size_y = new_scr_size_y;
+	grid->tile_p_w = new_tile_width;
+	sanitize_tile_p_w(grid);
+}
+
+void tl_fit_subgrid(grid_t *top_grid, grid_t *sub_grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1)
+{
+	int new_offset_x = x0 * top_grid->tile_p_w + top_grid->offset_x;
+	int new_offset_y = y0 * tile_pixel_height(top_grid) + top_grid->offset_y;
+	int new_scr_size_x = (x1-x0 + 1) * top_grid->tile_p_w;
+	int new_scr_size_y = (y1-y0 + 1) * tile_pixel_height(top_grid);
+	tl_resize_grid(sub_grid, new_offset_x, new_offset_y, new_scr_size_x, new_scr_size_y, sub_grid->tile_p_w);
+}
+
+// Adding instructions //
+
+#define r(x0, y0, x1, y1) (rect_t){x0, y0, x1, y1}
+
+#define REALLOC_PERCENTAGE 1.5f
+void check_realloc(grid_t *grid)
+{
+	if(grid->instructions_capacity == grid->instructions_count)
 	{
-		for(uint_t _x = 0; _x < width; _x++)
-		{
-			index = fast_i(width, _x, _y);
-			c_col = col_ptr[index];
-			c_symbol = symbols[index];
-			if(c_symbol != NO_SMBL && c_symbol != ' '  && c_col.a != 0)
-			{
-				index = fast_i(width, _x, _y);	
-				c_font = (fonts[index])? *fonts[index] : *grid->default_font;
-				DrawTextCodepoint(c_font , c_symbol,
-									(Vector2){grid->offset_x + _x * grid->tile_width, grid->offset_y + _y * tile_height},
-									grid->tile_width * grid->font_size_multiplier, c_col);
-				n_draw_calls++;
-			}
-		}
+		grid->instructions_capacity = grid->instructions_capacity * REALLOC_PERCENTAGE + 1;
+		grid->instructions = realloc(grid->instructions, grid->instructions_capacity * sizeof(bg_instruction_t));
 	}
-	return n_draw_calls;
 }
 
-Pos_t tl_render_grid(Grid_t *grid)
+bg_instruction_t *add_bg_instruction(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, color8b_t bg_col)
 {
-    return pos(render_background(grid), render_symbols(grid));
+	check_realloc(grid);
+	bg_instruction_t new_bg_instruction = (bg_instruction_t){BG, 0, bg_col, r(x0, y0, x1, y1)};
+
+	bg_instruction_t *bg_loc = (bg_instruction_t *)&grid->instructions[grid->instructions_count];
+
+	memcpy(bg_loc, &new_bg_instruction, sizeof(instruction_t));
+
+	grid->instructions_count++;
+
+	return bg_loc;
 }
 
-void tl_center_grid_on_screen(Grid_t *grid, uint_t scr_size_x, uint_t scr_size_y)
+smbl_instruction_t *add_smbl_instruction(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, char font, uchar_t smbl, color8b_t smbl_col)
 {
-	uint_t actual_grid_scr_size_x = grid_width(grid) * grid->tile_width;
-	uint_t actual_grid_scr_size_y = grid_height(grid) * tile_height(grid);
+	check_realloc(grid);
+	char type_and_font_bits = (char)SMBL | (font << 1);
 
-	grid->on_scr_size_x = actual_grid_scr_size_x;
-	grid->on_scr_size_y = actual_grid_scr_size_y;
-
-	grid->offset_x = (scr_size_x - actual_grid_scr_size_x)/2;
-	grid->offset_y = (scr_size_y - actual_grid_scr_size_y)/2;
-}
-
-void tl_resize_grid(Grid_t *grid, int new_offset_x, int new_offset_y, int new_scr_size_x, int new_scr_size_y, uint_t new_tile_width)
-{
-	uint_t new_width = new_scr_size_x / new_tile_width;
-	uint_t new_tile_height = new_tile_width * grid->tile_h_to_w_ratio;
-	uint_t new_height = new_scr_size_y / new_tile_height;
-	uint_t new_size = new_width * new_height;
 	
-	// printf("\nGrid resizing started: \n  w[%u -> %u]\n  [%u x %u] -> [%u x %u]\n  size[%u/%u]\n  screen: [%d x %d] -> [%d x %d]",
-		// grid->tile_width, new_tile_width, grid_width(grid), grid_height(grid), new_width, new_height, new_size, grid->max_tile_count,
-		// grid->on_scr_size_x, grid->on_scr_size_y, new_scr_size_x, new_scr_size_y);
+	smbl_instruction_t new_smbl_instruction = (smbl_instruction_t){type_and_font_bits, smbl, smbl_col, r(x0, y0, x1, y1)};
 
-	if(new_size > grid->max_tile_count)
-	{
-	/*
-		grid_w * grid_h <= MAX
-		grid_w = scr_x / tile_w
-		grid_h = scr_y / tile_h, tile_h = tile_w * r_t, = scr_y / (tile_w * r_t)
-		(scr_x / tile_w) * (scr_y / (tile_w * r_t)) <= MAX
-		(scr_x * scr_y) / (tile_w² * r_t) <= MAX		| * tile_w²
-		(scr_x * scr_y) / r_t <= MAX * tile_w²			| / MAX
-		(scr_x * scr_y) / (r_t * MAX) <= tile_w²		| sqrt()
-		sqrt((scr_x * scr_y) / (r_t * MAX)) <= tile_w
-		floor(sqrt((scr_x * scr_y) / (r_t * MAX))) ~ tile_w
-		
-		
-		
-	*/
+	smbl_instruction_t *smbl_loc = (smbl_instruction_t *)&grid->instructions[grid->instructions_count];
 
-		float r_t = grid->tile_h_to_w_ratio;
-		float max = (float)grid->max_tile_count;
-		new_tile_width = ceil(sqrt(((float)new_scr_size_x * (float)new_scr_size_y) / (r_t * max)));
-	}
+	memcpy(smbl_loc, &new_smbl_instruction, sizeof(instruction_t));
 
-	grid->offset_x = new_offset_x;
-	grid->offset_y = new_offset_y;
-	grid->on_scr_size_x = new_scr_size_x;
-	grid->on_scr_size_y = new_scr_size_y;
-	grid->tile_width = new_tile_width;
-	
-	// printf("\n  Grid Resized:\n  new tile_width: %u\n  new size: %d x %d -> %d tiles (MAX[%u]) - coords: (0-%d, 0-%d)\n",
-	    		// new_tile_width, grid_width(grid), grid_height(grid), grid_size(grid), grid->max_tile_count,
-	    		// grid_width(grid) - 1, grid_height(grid) - 1);
+	grid->instructions_count++;
+
+	return smbl_loc;
 }
 
-// x0 < x1
-// x1 <= top grid width
-void tl_fit_subgrid(Grid_t *top_grid, Grid_t *sub_grid, uint_t x0, uint_t y0, uint_t x1, uint_t y1)
+/// Plotting functions
+
+smbl_instruction_t *tl_plot_smbl(grid_t *grid, uchar_t x, uchar_t y, uchar_t symbol, color8b_t char_col, char font)
 {
-	int new_offset_x = x0 * top_grid->tile_width + top_grid->offset_x;
-	int new_offset_y = y0 * tile_height(top_grid) + top_grid->offset_y;
-	int new_scr_size_x = (x1-x0) * top_grid->tile_width;
-	int new_scr_size_y = (y1-y0) * tile_height(top_grid);
-	tl_resize_grid(sub_grid, new_offset_x, new_offset_y, new_scr_size_x, new_scr_size_y, sub_grid->tile_width);
+	return add_smbl_instruction(grid,  x,  y,  x,  y, font, symbol, char_col);
 }
 
-void tl_draw_tile(Grid_t *grid, uint_t x, uint_t y, char symbol, Color char_col, Color bg_col, Font *font)
+bg_instruction_t *tl_plot_bg(grid_t *grid, uchar_t x, uchar_t y, color8b_t bg_col)
 {
-	uint_t index = pos_to_i(grid, x, y);
-
-	grid->symbols[index] = symbol;
-	grid->symbol_colors[index] = char_col;
-	grid->bg_colors[index] = bg_col;
-	grid->fonts[index] = font;
+	return add_bg_instruction(grid,  x,  y,  x,  y, bg_col);
 }
 
-void tl_draw_rect(Grid_t *grid, uint_t x0, uint_t y0, uint_t width, uint_t height, char symbol, Color char_col, Color bg_col, Font *font)
+
+void tl_plot_smbl_w_bg(grid_t *grid, uchar_t x, uchar_t y, uchar_t symbol, color8b_t char_col, color8b_t bg_col, char font)
 {
-    for (uint_t _x = x0; _x <= x0 + width; _x++)
-    {
-        for (uint_t _y = y0; _y <= y0 + height; _y++)
-        {
-            tl_draw_tile(grid, _x, _y, symbol, char_col, bg_col, font);
-        }
-    }
+	add_bg_instruction(grid,  x,  y,  x,  y, bg_col);
+	add_smbl_instruction(grid,  x,  y,  x,  y, font, symbol, char_col);
 }
 
-void tl_draw_line(Grid_t *grid, uint_t x0, uint_t y0, uint_t x1, uint_t y1, char symbol, Color char_col, Color bg_col, Font *font)
+/// Drawing functions
+
+smbl_instruction_t *tl_draw_rect_smbl(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, char symbol, color8b_t char_col, char font)
+{
+	return add_smbl_instruction(grid,  x0,  y0,  x1,  y1, font, symbol, char_col);
+}
+
+bg_instruction_t *tl_draw_rect_bg(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, color8b_t bg_col)
+{
+	return add_bg_instruction(grid,  x0,  y0,  x1,  y1, bg_col);
+}
+void tl_draw_rect_smbl_w_bg(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, char symbol, color8b_t char_col, color8b_t bg_col, char font)
+{
+	add_bg_instruction(grid,  x0,  y0,  x1,  y1, bg_col);
+	add_smbl_instruction(grid,  x0,  y0,  x1,  y1, font, symbol, char_col);
+}
+
+// NOTE: Non-cardinal lines will use plot -> less efficient -> returns NULL instead of an instruction
+void tl_draw_line_non_orthogonal(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, uchar_t symbol, uchar_t char_col, color8b_t bg_col, char font, char scenario);
+
+smbl_instruction_t *tl_draw_line_smbl(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, uchar_t symbol, color8b_t char_col, char font)
+{
+	if (!(x0 == x1 || y0 == y1)) // Non-cardinal
+		tl_draw_line_non_orthogonal(grid, x0, y0, x1, y1, symbol, char_col, 0, font, 3);
+	return add_smbl_instruction(grid,  x0,  y0,  x1,  y1, font, symbol, char_col);
+}
+
+bg_instruction_t *tl_draw_line_bg(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, color8b_t bg_col)
+{
+	if (!(x0 == x1 || y0 == y1)) // Non-cardinal
+		tl_draw_line_non_orthogonal(grid, x0, y0, x1, y1, 0, 0, bg_col, 0, 1);
+	return add_bg_instruction(grid,  x0,  y0,  x1,  y1, bg_col);
+}
+
+void tl_draw_line_smbl_w_bg(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, uchar_t symbol, color8b_t char_col, color8b_t bg_col, char font)
+{
+	if (!(x0 == x1 || y0 == y1)) // Non-cardinal
+		tl_draw_line_non_orthogonal(grid, x0, y0, x1, y1, symbol, char_col, bg_col, font, 0);
+	add_bg_instruction(grid,  x0,  y0,  x1,  y1, bg_col);
+	add_smbl_instruction(grid,  x0,  y0,  x1,  y1, font, symbol, char_col);
+}
+
+void tl_draw_line_non_orthogonal(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, uchar_t symbol, uchar_t char_col, color8b_t bg_col, char font, char scenario)
 {
     // https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
     int dx = abs(x1 - x0);			// Don't believe the linter's lies, the abs() are needed!
@@ -291,7 +324,15 @@ void tl_draw_line(Grid_t *grid, uint_t x0, uint_t y0, uint_t x1, uint_t y1, char
     
     while (true)
     {
-        tl_draw_tile(grid, x0, y0, symbol, char_col, bg_col, font);
+    	if(scenario == 0)
+    	{
+        	add_bg_instruction(grid,  x0,  y0,  x0,  y0, bg_col);
+    		add_smbl_instruction(grid,  x0,  y0,  x0,  y0, font, symbol, char_col);
+    	}
+    	else if(scenario == 1)
+        	add_bg_instruction(grid,  x0,  y0,  x0,  y0, bg_col);
+    	else
+    		add_smbl_instruction(grid,  x0,  y0,  x0,  y0, font, symbol, char_col);
 
         if (x0 == x1 && y0 == y1) break;
         
@@ -312,62 +353,25 @@ void tl_draw_line(Grid_t *grid, uint_t x0, uint_t y0, uint_t x1, uint_t y1, char
     }
 }
 
-// wrap = 0 => no wrapping
-uint_t tl_draw_text(Grid_t * grid, uint_t x, uint_t y, uint_t wrap, char *text, uint_t len, Color char_col, Color bg_col, Font *font)
+Pos_t tl_screen_to_grid_coords(grid_t *grid, Pos_t xy)
 {
-    uint_t _x = x;
-    uint_t _y = y;
+	xy.x = uclamp(grid->offset_x, xy.x, grid->offset_x + grid->on_scr_size_x);
+	xy.y = uclamp(grid->offset_y, xy.y, grid->offset_y + grid->on_scr_size_y);
 
-    for (uint_t i = 0; i < len; i++)
-    {
-        if(text[i] != '\n')
-            tl_draw_tile(grid, _x, _y, text[i], char_col, bg_col, font);
-
-        _x++;
-
-        // Wrap around to start of x, on new line (y) and continue
-        if ((_x >= wrap && wrap != 0) || text[i] == '\n') {_x = x; _y++;}
-    }
-
-    return _y - y + 1; // Rows written
+    return pos((xy.x - grid->offset_x) / grid->tile_p_w, (xy.y - grid->offset_y) / tile_pixel_height(grid));
 }
 
-Pos_t rendered_grid_size(Grid_t *grid)
-{
-	return pos((grid_width(grid) - 1) * grid->tile_width, (grid_height(grid) - 1) * tile_height(grid));
-}
-
-Pos_t tl_screen_to_grid_coords(Grid_t *grid, Pos_t xy)
-{
-	Pos_t rendered_size = rendered_grid_size(grid);
-	xy.x = uclamp(grid->offset_x, xy.x, grid->offset_x + rendered_size.x);
-	xy.y = uclamp(grid->offset_y, xy.y, grid->offset_y + rendered_size.y);
-	// xy.x = uclamp(grid->offset_x, xy.x, grid->offset_x + grid->on_scr_size_x);
-	// xy.y = uclamp(grid->offset_y, xy.y, grid->offset_y + grid->on_scr_size_y);
-	// printf("\nx: %u < %u > %u \ny: %u < %u > %u\n",grid->offset_x, xy.x, grid->offset_x + grid->on_scr_size_x,
-	// grid->offset_y, xy.y, grid->offset_y + grid->on_scr_size_y);
-    return pos((xy.x - grid->offset_x) / grid->tile_width, (xy.y - grid->offset_y) / tile_height(grid));
-}
-
-void tl_set_tile_bg(Grid_t *grid, uint_t x, uint_t y, Color bg_col)
-{
-	grid->bg_colors[pos_to_i(grid, x, y)] = bg_col;
-}
-
-void tl_set_tile_char_col(Grid_t *grid, uint_t x, uint_t y, Color char_col)
-{
-	grid->symbol_colors[pos_to_i(grid, x, y)] = char_col;
-}
-
-void tl_tile_invert_colors(Grid_t *grid, uint_t x, uint_t y)
-{
-	uint_t index = pos_to_i(grid, x, y);
-    Color tmp = grid->bg_colors[index];
-    grid->bg_colors[index] = grid->symbol_colors[index];
-    grid->symbol_colors[index] = tmp;
-}
-
-void tl_grid_set_txt_padding(Grid_t *grid, float pp)
+void tl_grid_set_txt_padding(grid_t *grid, float pp)
 {
 	grid->txt_padding_prc_h = pp;
+}
+
+void tl_print_grid_info(grid_t *grid)
+{
+	printf("\n-G[%ux%u]\n--T[%ux%u]\n--F[%dp]\n",
+			grid_width(grid),
+			grid_height(grid),
+			grid->tile_p_w,
+			tile_pixel_height(grid),
+			(int)(grid->tile_p_w * grid->font_size_multiplier));
 }

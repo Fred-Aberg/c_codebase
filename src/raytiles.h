@@ -7,60 +7,126 @@
 #define NO_SMBL 0
 #define CALCULATE_MAX_TILES 0
 
+#define MAX_GRID_W 256
+#define MAX_GRID_H 256
+#define MAX_GRID_SIZE 65536
+
+#define BLACK8B 0
+#define WHITE8B 255
+
+typedef unsigned char color8b_t;
+
+color8b_t col8bt(char r, char b, char g);
+
+Color tl_color8b_to_Color(color8b_t col);
+
+color8b_t tl_Color_to_color8b(Color col);
+
+typedef struct 
+{
+	char x0;
+	char y0;
+	char x1;
+	char y1;
+}rect_t;						// 32 bits = 4 bytes
+
+typedef struct
+{
+	char type_bit;				// 8 bits
+	char padding;				// 8 bits
+	color8b_t bg_col;			// 8 bit colors
+	rect_t rect;				// 32 bits
+}bg_instruction_t;				// = 56 bits = 7 bytes
+
+typedef struct
+{
+	char type_and_font_bits;	// 8 bits 1b + 7b
+	uchar_t smbl;				// 8 bits
+	color8b_t smbl_col;			// 8 bit colors
+	rect_t rect;				// 32 bits
+}smbl_instruction_t;			// = 56 bits = 7 bytes
+
+#define SMBL 0
+#define BG 1
+
+typedef struct
+{
+	char type_bit;
+	char padding;
+	color8b_t color;
+	rect_t rect;
+}instruction_t;		// Generic type covering smbl and bg instruction types
+
 typedef struct
 {
 	int offset_x;
 	int offset_y;
     int on_scr_size_x;
     int on_scr_size_y;
-    uint_t tile_width;
-    uint_t max_tile_count;
+    
+    int tile_p_w;
     float tile_h_to_w_ratio;
 	float txt_padding_prc_v;
 	float txt_padding_prc_h;
 	float font_size_multiplier;
-    Color default_col;
-    Font *default_font;
+	
+	uint_t instructions_count;
+	uint_t instructions_capacity;
+	instruction_t *instructions;
+	
+    Font *fonts; // max 128 font-indexes
+} grid_t;
 
-	char *symbols;			// Textures? more efficient than fonts?
-	Color *symbol_colors;
-	Color *bg_colors;
-    Font **fonts;
-} Grid_t;
+grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_size_y, uint_t tile_p_w, float tile_h_to_w_ratio, 
+					Font *fonts, uint_t starting_instruction_capacity);
 
-Grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_size_y, 
-					uint_t tile_width, float tile_h_to_w_ratio, uint_t max_tile_count, Color def_col, Font *def_font);
+void tl_deinit_grid(grid_t *grid);
 
-void tl_deinit_grid(Grid_t *grid);
+Pos_t tl_grid_get_dimensions(grid_t *grid);
 
-Pos_t tl_grid_get_size(Grid_t *grid);
+Pos_t tl_render_grid(grid_t *grid);
 
-Pos_t tl_render_grid(Grid_t *grid);
+void tl_center_grid_on_screen(grid_t *grid, int scr_size_x, int scr_size_y);
 
-void tl_center_grid_on_screen(Grid_t *grid, uint_t scr_size_x, uint_t scr_size_y);
+void tl_change_tile_pw(grid_t *grid, int pw_change);
 
-void tl_resize_grid(Grid_t *grid, int new_offset_x, int new_offset_y, int new_scr_size_x, int new_scr_size_y, uint_t new_tile_width);
+void tl_set_tile_pw(grid_t *grid, int new_tile_pw);
 
-void tl_fit_subgrid(Grid_t *top_grid, Grid_t *sub_grid, uint_t x0, uint_t y0, uint_t x1, uint_t y1);
+void tl_resize_grid(grid_t *grid, int new_offset_x, int new_offset_y, int new_scr_size_x, int new_scr_size_y, uint_t new_tile_width);
 
-void tl_draw_tile(Grid_t *grid, uint_t x, uint_t y, char symbol, Color char_col, Color bg_col, Font *font);
+void tl_fit_subgrid(grid_t *top_grid, grid_t *sub_grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1);
 
-void tl_draw_rect(Grid_t *grid, uint_t x0, uint_t y0, uint_t width, uint_t height, char symbol, Color char_col, Color bg_col, Font *font);
+// Plot functions //
+	// Use sparingly, for isolated graphical elements and text
 
-void tl_draw_line(Grid_t *grid, uint_t x0, uint_t y0, uint_t x1, uint_t y1, char symbol, Color char_col, Color bg_col, Font *font);
+smbl_instruction_t *tl_plot_smbl(grid_t *grid, uchar_t x, uchar_t y, uchar_t symbol, color8b_t char_col, char font);
 
-uint_t tl_draw_text(Grid_t * grid, uint_t x, uint_t y, uint_t wrap, char *text, uint_t len, Color char_col, Color bg_col, Font *font);
+bg_instruction_t *tl_plot_bg(grid_t *grid, uchar_t x, uchar_t y, color8b_t bg_col);
 
-void tl_draw_prose(uint_t x, uint_t y, char *wrapped_text, uint_t len, Color char_col, Color bg_col, Font *font);
+void tl_plot_smbl_w_bg(grid_t *grid, uchar_t x, uchar_t y, uchar_t symbol, color8b_t char_col, color8b_t bg_col, char font);
 
-Pos_t tl_screen_to_grid_coords(Grid_t *grid, Pos_t xy);
+// Draw functions //
+	// Generates instructions for drawing in batches
 
-void tl_set_tile_bg(Grid_t *grid, uint_t x, uint_t y, Color bg_col);
+smbl_instruction_t *tl_draw_rect_smbl(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, char symbol, color8b_t char_col, char font);
 
-void tl_set_tile_char_col(Grid_t *grid, uint_t x, uint_t y, Color char_col);
+bg_instruction_t *tl_draw_rect_bg(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, color8b_t bg_col);
 
-void tl_tile_invert_colors(Grid_t *grid, uint_t x, uint_t y);
+void tl_draw_rect_smbl_w_bg(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, char symbol, color8b_t char_col, color8b_t bg_col, char font);
 
-void tl_grid_set_txt_padding(Grid_t *grid, float pp);
+// NOTE: Non-cardinal lines will use plot -> less efficient -> returns NULL instead of an instruction
 
+smbl_instruction_t *tl_draw_line_smbl(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, uchar_t symbol, color8b_t char_col, char font);
+
+bg_instruction_t *tl_draw_line_bg(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, color8b_t bg_col);
+
+void tl_draw_line_smbl_w_bg(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, uchar_t symbol, color8b_t char_col, color8b_t bg_col, char font);
+
+// Misc.
+
+Pos_t tl_screen_to_grid_coords(grid_t *grid, Pos_t xy);
+
+void tl_grid_set_txt_padding(grid_t *grid, float pp);
+
+void tl_print_grid_info(grid_t *grid);
 

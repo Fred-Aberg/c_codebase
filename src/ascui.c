@@ -7,74 +7,101 @@
 #include "raytiles.h"
 #include "texts.h"
 
-#define get_orientation(container) *(Container_orientation_e *)(container->container_type_data)
+#define get_orientation(container) *(container_orientation_e *)(container->container_type_data)
 
 
-static void draw_cursor_selection(Grid_t *grid, Cursor_t *cursor, Container_t *container, uint_t x0, uint_t y0, uint_t x1, uint_t y1, uint_t max_scroll)
+// static void draw_cursor_selection(grid_t *grid, cursor_t *cursor, container_t *container, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, uint_t max_scroll)
+// {
+	// if(cursor->hovered_container != container && cursor->selected_container != container) return;
+	// if (container->container_type == BOX || container->container_type == CONTAINER)
+	// {
+		// for (uint_t x = x0; x <= x1; x++)
+		// {
+			// tl_tile_invert_color8b_ts(grid, x, y0);
+			// tl_tile_invert_color8b_ts(grid, x, y1);
+		// }
+		// for (uint_t y = y0 + 1; y < y1; y++)
+		// {
+			// tl_tile_invert_color8b_ts(grid, x0, y);
+			// tl_tile_invert_color8b_ts(grid, x1, y);
+		// }
+	// }
+	// else
+	// {
+		// for (uint_t x = x0; x <= x1; x++)
+		// {
+			// for (uint_t y = y0; y <= y1; y++)
+			// {
+				// tl_tile_invert_color8b_ts(grid, x, y);
+			// }
+		// }
+	// }
+// 
+	// if(container->container_type == BOX || container->container_type == CONTAINER)
+	// {
+		// if(get_orientation(container) == HORIZONTAL)
+			// tl_set_tile_bg(grid, x0, y0 + (y1-y0) * ((float)container->scroll_offset / (float)max_scroll), BLACK);
+		// else
+			// tl_set_tile_bg(grid, x0 + (x1-x0) * ((float)container->scroll_offset / (float)max_scroll), y0, BLACK);
+	// }
+	// if(cursor->scroll != 0 && max_scroll != 0)
+	// {
+		// tl_set_tile_bg(grid, x0, y0 + (y1-y0) * ((float)container->scroll_offset / (float)max_scroll), BLACK);
+	// }
+// }
+
+static bool check_cursor_hover(cursor_t *cursor, container_t *container, uchar_t x0, int y0, uchar_t x1, int y1)
 {
-	if(cursor->hovered_container != container && cursor->selected_container != container) return;
-	if (container->container_type == BOX || container->container_type == CONTAINER)
+	if(container->container_type == CONTAINER)
+		return false;
+	
+	if(container->container_type == BOX)
 	{
-		for (uint_t x = x0; x <= x1; x++)
+		bool x_match = (cursor->x == x0) || (cursor->x == x1);
+		bool y_match = (cursor->y == y0) || (cursor->y == y1);
+		if(x_match || y_match)
 		{
-			tl_tile_invert_colors(grid, x, y0);
-			tl_tile_invert_colors(grid, x, y1);
+			cursor->hovered_container = container;
+			return true;
 		}
-		for (uint_t y = y0 + 1; y < y1; y++)
-		{
-			tl_tile_invert_colors(grid, x0, y);
-			tl_tile_invert_colors(grid, x1, y);
-		}
-	}
-	else
-	{
-		for (uint_t x = x0; x <= x1; x++)
-		{
-			for (uint_t y = y0; y <= y1; y++)
-			{
-				tl_tile_invert_colors(grid, x, y);
-			}
-		}
+		return false;
 	}
 
-	if(container->container_type == BOX || container->container_type == CONTAINER)
-	{
-		if(get_orientation(container) == HORIZONTAL)
-			tl_set_tile_bg(grid, x0, y0 + (y1-y0) * ((float)container->scroll_offset / (float)max_scroll), BLACK);
-		else
-			tl_set_tile_bg(grid, x0 + (x1-x0) * ((float)container->scroll_offset / (float)max_scroll), y0, BLACK);
-	}
-	if(cursor->scroll != 0 && max_scroll != 0)
-	{
-		tl_set_tile_bg(grid, x0, y0 + (y1-y0) * ((float)container->scroll_offset / (float)max_scroll), BLACK);
-	}
-}
-
-static void check_cursor_hover(Cursor_t *cursor, Container_t *container, uint_t x0, int y0, uint_t x1, int y1)
-{		
+	// All other types (childless)
 	if(x0 <= cursor->x && x1 >= cursor->x && y0 <= (int)cursor->y && y1 >= (int)cursor->y)
+	{
 		cursor->hovered_container = container;
+		return true;
+	}
+	return false;
 }
 
-static void draw_box(Grid_t *grid, Container_style_t style, uint_t x0, uint_t y0, uint_t x1, uint_t y1)
+static void draw_box(grid_t *grid, container_style_t style, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, bool invert_cols)
 {
-	tl_draw_line(grid, x0 + 1, y0, x1 - 1, y0, style.border_h_symbol, style.char_col, style.border_col, NULL); // Top
-	tl_draw_line(grid, x0 + 1, y1, x1 - 1, y1, style.border_h_symbol, style.char_col, style.border_col, NULL); // Bottom
-	tl_draw_line(grid, x0, y0 + 1, x0, y1 - 1, style.border_v_symbol, style.char_col, style.border_col, NULL); // Left
-	tl_draw_line(grid, x1, y0 + 1, x1, y1 - 1, style.border_v_symbol, style.char_col, style.border_col, NULL); // Right
+	if (invert_cols)
+	{
+		color8b_t tmp = style.char_col;
+		style.char_col = style.border_col;
+		style.border_col = tmp;
+	}
 
-	tl_draw_tile(grid, x0, y0, style.corner_symbol, style.char_col, style.border_col, NULL);
-	tl_draw_tile(grid, x0, y1, style.corner_symbol, style.char_col, style.border_col, NULL);
-	tl_draw_tile(grid, x1, y0, style.corner_symbol, style.char_col, style.border_col, NULL);
-	tl_draw_tile(grid, x1, y1, style.corner_symbol, style.char_col, style.border_col, NULL);
+	tl_draw_line_smbl_w_bg(grid, x0 + 1, y0, x1 - 1, y0, style.border_h_symbol, style.char_col, style.border_col, style.font); // Top
+	tl_draw_line_smbl_w_bg(grid, x0 + 1, y1, x1 - 1, y1, style.border_h_symbol, style.char_col, style.border_col, style.font); // Bottom
+	tl_draw_line_smbl_w_bg(grid, x0, y0 + 1, x0, y1 - 1, style.border_v_symbol, style.char_col, style.border_col, style.font); // Left
+	tl_draw_line_smbl_w_bg(grid, x1, y0 + 1, x1, y1 - 1, style.border_v_symbol, style.char_col, style.border_col, style.font); // Right
+
+	tl_plot_smbl_w_bg(grid, x0, y0, style.corner_symbol, style.char_col, style.border_col, style.font);
+	tl_plot_smbl_w_bg(grid, x0, y1, style.corner_symbol, style.char_col, style.border_col, style.font);
+	tl_plot_smbl_w_bg(grid, x1, y0, style.corner_symbol, style.char_col, style.border_col, style.font);
+	tl_plot_smbl_w_bg(grid, x1, y1, style.corner_symbol, style.char_col, style.border_col, style.font);
 }
 
 
-static uint_t ascui_draw_container(Grid_t *grid, Container_t *container, uint_t x0, uint_t y0, uint_t x1, uint_t y1,
-								 Container_orientation_e parent_orientation, Cursor_t *cursor);
+static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t x0, uint_t y0, uint_t x1, uint_t y1,
+								 container_orientation_e parent_orientation, cursor_t *cursor);
 
 /*
-static uint_t ascui_draw_container_percentage_split(Grid_t *grid, Container_t *container, uint_t x0, uint_t y0, uint_t x1, uint_t y1, Container_orientation_e parent_orientation, Cursor_t *cursor)
+static uint_t ascui_draw_container_percentage_split(grid_t *grid, container_t *container, uint_t x0, uint_t y0, uint_t x1, uint_t y1, container_orientation_e parent_orientation, cursor_t *cursor)
 {
 	if (!container->open)
 		return 0;
@@ -89,13 +116,13 @@ static uint_t ascui_draw_container_percentage_split(Grid_t *grid, Container_t *c
 
 
 	uint_t n_subcontainers;
-	Container_t *subcontainers;
-	Container_orientation_e orientation;
-	Container_style_t style;
+	container_t *subcontainers;
+	container_orientation_e orientation;
+	container_style_t style;
 	
 	if (container->container_type == CONTAINER)
 	{
-		Container_data_t c_data = *ascui_get_container_data(*container);
+		container_data_t c_data = *ascui_get_container_data(*container);
 		n_subcontainers = c_data.n_subcontainers;
 		subcontainers = c_data.subcontainers;
 		orientation = c_data.orientation;
@@ -103,7 +130,7 @@ static uint_t ascui_draw_container_percentage_split(Grid_t *grid, Container_t *c
 	}
 	else if (container->container_type == BOX)
 	{
-		Box_data_t b_data = *ascui_get_box_data(*container);
+		box_data_t b_data = *ascui_get_box_data(*container);
 		n_subcontainers = b_data.n_subcontainers;
 		subcontainers = b_data.subcontainers;
 		orientation = b_data.orientation;
@@ -160,8 +187,8 @@ static uint_t ascui_draw_container_percentage_split(Grid_t *grid, Container_t *c
 	return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
 }*/
 
-static uint_t ascui_draw_container(Grid_t *grid, Container_t *container, uint_t x0, uint_t y0, uint_t x1, uint_t y1,
-								 Container_orientation_e parent_orientation, Cursor_t *cursor)
+static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t x0, uint_t y0, uint_t x1, uint_t y1,
+								 container_orientation_e parent_orientation, cursor_t *cursor)
 {
 	if (!container->open)
 		return 0;
@@ -169,17 +196,18 @@ static uint_t ascui_draw_container(Grid_t *grid, Container_t *container, uint_t 
 	if (x1 <= x0 || y1 <= y0)
 		return 0;
 
-	check_cursor_hover(cursor, container, x0, y0 , x1, y1);		
+	check_cursor_hover(cursor, container, x0, y0 , x1, y1);
 
+	bool hovered = false;
+	bool selected = cursor->selected_container == container;
 	float percentage;
-	uint_t sub_x0;
-	uint_t sub_y0;
-	uint_t sub_x1;
-	uint_t sub_y1;
+
+	uchar_t sub_x1;
+	uchar_t sub_y1;
 
 	uint_t n_subcontainers;
-	Container_t *c_subcontainer;
-	Container_Type_e c_type = container->container_type;
+	container_t *c_subcontainer;
+	container_type_e c_type = container->container_type;
 	// bool percentage_split = true;
 
 	uint_t tiles_drawn = 0;
@@ -187,15 +215,15 @@ static uint_t ascui_draw_container(Grid_t *grid, Container_t *container, uint_t 
 	 	
 	if (c_type == CONTAINER || c_type == BOX)
 	{
-		Container_t *subcontainers;
-		Container_orientation_e orientation;
-		Container_style_t style;
+		container_t *subcontainers;
+		container_orientation_e orientation;
+		container_style_t style;
 
 		
 
 		if (c_type == CONTAINER)
 		{
-			Container_data_t c_data = *ascui_get_container_data(*container);
+			container_data_t c_data = *ascui_get_container_data(*container);
 			n_subcontainers = c_data.n_subcontainers;
 			subcontainers = c_data.subcontainers;
 			orientation = c_data.orientation;
@@ -203,7 +231,7 @@ static uint_t ascui_draw_container(Grid_t *grid, Container_t *container, uint_t 
 		}
 		else if (c_type == BOX)
 		{
-			Box_data_t b_data = *ascui_get_box_data(*container);
+			box_data_t b_data = *ascui_get_box_data(*container);
 			n_subcontainers = b_data.n_subcontainers;
 			subcontainers = b_data.subcontainers;
 			orientation = b_data.orientation;
@@ -233,7 +261,7 @@ static uint_t ascui_draw_container(Grid_t *grid, Container_t *container, uint_t 
 		{
 			c_subcontainer = &subcontainers[i];
 			// Edge case: Last subcontainer
-			if (i == n_subcontainers - 1 && container->size_type != GROW)
+			if (i == n_subcontainers - 1)
 			{
 				if (orientation == HORIZONTAL)
 				{
@@ -305,21 +333,6 @@ static uint_t ascui_draw_container(Grid_t *grid, Container_t *container, uint_t 
 					tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0 + tiles_drawn, y0, sub_x1, sub_y1, orientation, cursor);
 				} 					
 			}
-			else if (c_subcontainer->size_type == GROW)
-			{
-				if (orientation == HORIZONTAL)
-				{
-					sub_x1 = x1;
-					sub_y1 = y1;
-					tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0, y0 + tiles_drawn, sub_x1, sub_y1, orientation, cursor);
-				}
-				else if (orientation == VERTICAL)
-				{
-					sub_x1 = x1;
-					sub_y1 = y1;
-					tiles_drawn += ascui_draw_container(grid, c_subcontainer, x0 + tiles_drawn, y0, sub_x1, sub_y1, orientation, cursor);
-				} 					
-			}
 		}
 		
 		if(c_type == BOX)
@@ -329,38 +342,41 @@ static uint_t ascui_draw_container(Grid_t *grid, Container_t *container, uint_t 
 			x1++;
 			y1++;
 			
-			if (container->size_type == GROW)
-			{
-				// GROW => tiles_drawn is the deciding factor in how many tiles is to be drawn
-				if (parent_orientation == HORIZONTAL)
-					y1 = y0 + tiles_drawn + 1; 
-				else if (parent_orientation == VERTICAL)
-					x1 = x0 + tiles_drawn + 1; 
-			}
-			draw_box(grid, style, x0, y0, x1, y1);
+			draw_box(grid, style, x0, y0, x1, y1, check_cursor_hover(cursor, container, x0, y0, x1, y1));
 		}
 		
-		if (container->size_type != GROW)
-		{
-			// !GROW => Force the size to be x1-x0 or y1-y0
-			if (parent_orientation == HORIZONTAL)
-				tiles_drawn = y1-y0 + 1;
-			else if (parent_orientation == VERTICAL)
-				tiles_drawn = x1-x0 + 1;
-		}
-		
-		draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1, max_scroll);
+
+		if (parent_orientation == HORIZONTAL)
+			tiles_drawn = y1-y0 + 1;
+		else if (parent_orientation == VERTICAL)
+			tiles_drawn = x1-x0 + 1;
+
 		return tiles_drawn;
 	}
 	else if(c_type == TEXT)
 	{
-		Text_data_t t_data = *ascui_get_text_data(*container);
+		hovered = check_cursor_hover(cursor, container, x0, y0, x1, y1);
+		
+		text_data_t t_data = *ascui_get_text_data(*container);
+
+		color8b_t bg_col;
+		color8b_t smbl_col;
+		if(hovered || selected)
+		{
+			bg_col = t_data.style.char_col;
+			smbl_col = t_data.style.bg_col;
+		}
+		else
+		{
+			bg_col = t_data.style.bg_col;
+			smbl_col = t_data.style.char_col;
+		}
 		
 		uint_t _x = 0;
 		int _y = - container->scroll_offset; // = 0 at no scroll
 		uint_t total_text_len = 0;
-		
-		uint_t gap;
+
+		tl_draw_rect_bg(grid, x0, y0, x1, y1, bg_col);
 
 		for (uint_t i = 0; i < t_data.text_len; i++)
 		{
@@ -368,130 +384,113 @@ static uint_t ascui_draw_container(Grid_t *grid, Container_t *container, uint_t 
 				{total_text_len++;  _y++; _x = 0; }
 			
 			if (t_data.text[i] == '\n')
-			{
-				gap = x1-x0-_x+1;
-				while (gap != 0)
-				{
-					if(_y >= 0 && !(y0 + max(0, _y) > y1))
-						tl_draw_tile(grid, x0 + _x, y0 + _y, 0, t_data.text_col, t_data.bg_col, NULL);
-					gap--;
-					_x++;
-				}	
+			{	
 				_y++;
 				total_text_len++;
 				_x = 0;
 				continue; 
 			}
 			if(_y >= 0 && !(y0 + max(0, _y) > y1)) // do not render if tiles have been "scrolled" out of view - or if the text overflows
-				tl_draw_tile(grid, x0 + _x, y0 + _y, t_data.text[i], t_data.text_col, t_data.bg_col, NULL);
+				tl_plot_smbl(grid, x0 + _x, y0 + _y, t_data.text[i], smbl_col, t_data.style.font);
 			_x++;
 		}
-
-		// Gap after text
-		gap = x1-x0-_x + 1;
-		while (gap != 0)
-		{
-			if(_y >= 0 && !(y0 + max(0, _y) > y1)) // do not render if tiles have been "scrolled" out of view - or if the text overflows
-				tl_draw_tile(grid, x0 + _x, y0 + _y, 0, t_data.text_col, t_data.bg_col, NULL);
-			gap--;
-			_x++;
-		}
-
-		if (container->size_type == GROW)
-		{
-			
-			uint_t max_scroll = max((int)total_text_len - _y, 0);
-			container->scroll_offset = umin(container->scroll_offset, max_scroll);
-	
-			draw_cursor_selection(grid, cursor, container, x0, y0, x1, total_text_len, max_scroll);
-			return (parent_orientation == VERTICAL)? x1-x0 + 1 : total_text_len;
-		}
-		else if(y0 + _y < y1)	// Gap below text
-			tl_draw_rect(grid, x0, max((int)y0 + _y + 1, y0), x1-x0, y1-max(_y + 1, y0), 0, t_data.text_col, t_data.bg_col, NULL);
 			
 		uint_t max_scroll = max((int)total_text_len - (int)(y1-y0), 0);
 		container->scroll_offset = umin(container->scroll_offset, max_scroll);
 
-		draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1, max_scroll);
+		if(hovered && cursor->scroll != 0)
+			tl_plot_bg(grid, x0, y0 + (y1-y0) * ((float)container->scroll_offset / (float)max_scroll), BLACK8B);
+			
+
 		return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
 	}
 	else if(c_type == SUBGRID)
 	{
-		Subgrid_data_t *subg_data = ascui_get_subgrid_data(*container);
+		subgrid_data_t *subg_data = ascui_get_subgrid_data(*container);
+
+		if(!subg_data->subgrid)
+			ERROR("\n UI drawing error: Subgrid not initialized!")
+		
 		if(cursor->hovered_container == container)
-			subg_data->subgrid->tile_width -= cursor->scroll;	// "Suggest" new tile width
-		tl_fit_subgrid(grid, subg_data->subgrid, x0, y0, x1, y1);
+			subg_data->subgrid->tile_p_w -= cursor->scroll;		// "Suggest" new tile width
+		tl_fit_subgrid(grid, subg_data->subgrid, x0, y0, x1, y1);	// new tile width sanitized by tl_fit_subgrid
 		// draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1, 0);
 	}
 	else if(c_type == BUTTON)
 	{
-		Button_data_t *bt_data = ascui_get_button_data(*container);
+		hovered = check_cursor_hover(cursor, container, x0, y0, x1, y1);
+		button_data_t bt_data = *ascui_get_button_data(*container);
 
-		uint_t horizontal_space = x1 - x0 + 1;
-		uint_t vertical_space = y1 - y0 + 1;
-		uint_t vertical_midpoint = vertical_space / 2;
-		int  horizontal_start = ((int)horizontal_space - (int)bt_data->text_len) / 2;
+		color8b_t bg_col;
+		color8b_t smbl_col;
+		if(hovered || selected)
+		{
+			bg_col = bt_data.style.char_col;
+			smbl_col = bt_data.style.bg_col;
+		}
+		else
+		{
+			bg_col = bt_data.style.bg_col;
+			smbl_col = bt_data.style.char_col;
+		}
 
-		tl_draw_rect(grid, x0, y0, horizontal_space - 1, vertical_space - 1, 0, bt_data->style.char_col, bt_data->style.bg_col, NULL);
+
+		uchar_t horizontal_space = x1 - x0 + 1;
+		uchar_t vertical_space = y1 - y0 + 1;
+		uchar_t vertical_midpoint = vertical_space / 2;
+		int  horizontal_start = ((int)horizontal_space - (int)bt_data.text_len) / 2;
+
+		tl_draw_rect_bg(grid, x0, y0, x1, y1, bg_col);
 
 		if (horizontal_start >= 0)
 		{
-			for (uint_t i = 0; i < bt_data->text_len; i++)
+			for (uint_t i = 0; i < bt_data.text_len; i++)
 			{
-				tl_draw_tile(grid, x0 + horizontal_start + i, y0 + vertical_midpoint, bt_data->text[i], bt_data->style.char_col, bt_data->style.bg_col, NULL);
+				tl_plot_smbl(grid, x0 + horizontal_start + i, y0 + vertical_midpoint, bt_data.text[i], smbl_col, bt_data.style.font);
 			}
 		}
 		else
 		{
-			uint_t _x = 0;
-			uint_t _y = 0;
-			uint_t gap;
+			uchar_t _x = 0;
+			uchar_t _y = 0;
 			
-			for (uint_t i = 0; i < bt_data->text_len; i++)
+			for (uint_t i = 0; i < bt_data.text_len; i++)
 			{
-				if (_x > horizontal_space - 1)
+			
+				if (x0 + _x > x1)
 					{_y++; _x = 0; }
 					
-				if (_y > vertical_space - 1)
+				if(y0 + _y < y1)
 					break;
 				
-				if (bt_data->text[i] == '\n')
-				{
-					gap = x1-x0-_x+1;
-					while (gap != 0)
-					{
-						tl_draw_tile(grid, x0 + _x, y0 + _y, 0, bt_data->style.char_col, bt_data->style.bg_col, NULL);
-						gap--;
-						_x++;
-					}	
+				if (bt_data.text[i] == '\n')
+				{	
 					_y++;
 					_x = 0;
 					continue; 
 				}
-			tl_draw_tile(grid, x0 + _x, y0 + _y, bt_data->text[i], bt_data->style.char_col, bt_data->style.bg_col, NULL);
-			_x++;
+				
+				tl_plot_smbl(grid, x0 + _x, y0 + _y, bt_data.text[i], smbl_col, bt_data.style.font);
+				_x++;
 			}
 		}
-
-		
-		draw_cursor_selection(grid, cursor, container, x0, y0, x1, y1, max_scroll);
 		return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
 	}
 	else return 0;
 }
 
-void ascui_draw_ui(Grid_t *grid, Container_t *top_container, Cursor_t *cursor)
+void ascui_draw_ui(grid_t *grid, container_t *top_container, cursor_t *cursor)
 {
-	cursor->hovered_container = NULL; // Reset selected container
+	cursor->hovered_container = NULL; // Reset hovered container
 
-	Pos_t grid_size = tl_grid_get_size(grid);
-	Container_data_t c_data = *ascui_get_container_data(*top_container);
+	Pos_t grid_size = tl_grid_get_dimensions(grid);
+	container_data_t c_data = *ascui_get_container_data(*top_container);
 	ascui_draw_container(grid, top_container, 0, 0, grid_size.x - 1, grid_size.y - 1, c_data.orientation, cursor);
 }
 
-static Container_t create_container_stub(bool open, Size_Type_e s_type, uint_t size, Container_Type_e c_type)
+static container_t create_container_stub(bool open, size_type_e s_type, uchar_t size, container_type_e c_type)
 {
-	Container_t	container;
+	container_t	container;
 	container.open = open;
 	container.scroll_offset = 0;
 	container.size_type = s_type;
@@ -501,102 +500,98 @@ static Container_t create_container_stub(bool open, Size_Type_e s_type, uint_t s
 	return container;
 }
 
-Container_data_t *ascui_get_container_data(Container_t container)
+container_data_t *ascui_get_container_data(container_t container)
 {
-	return (Container_data_t *)container.container_type_data;
+	return (container_data_t *)container.container_type_data;
 }
 
-Container_t ascui_create_container(bool open, Size_Type_e s_type, uint_t size,
-									Container_orientation_e orientation, uint_t n_subcontainers)
+container_t ascui_create_container(bool open, size_type_e s_type, uchar_t size,
+									container_orientation_e orientation, uint_t n_subcontainers)
 {
-	Container_t container = create_container_stub(open, s_type, size, CONTAINER);
-	container.container_type_data = calloc(1, sizeof(Container_data_t));
+	container_t container = create_container_stub(open, s_type, size, CONTAINER);
+	container.container_type_data = calloc(1, sizeof(container_data_t));
 	
-	Container_data_t *c_data = ascui_get_container_data(container);
+	container_data_t *c_data = ascui_get_container_data(container);
 
 	c_data->orientation = orientation;
 	c_data->n_subcontainers = n_subcontainers;
 	if (n_subcontainers != 0)
-		c_data->subcontainers = calloc(n_subcontainers, sizeof(Container_t)); // container owns subcontainers
+		c_data->subcontainers = calloc(n_subcontainers, sizeof(container_t)); // container owns subcontainers
 
 	return container;
 }
 
-Box_data_t *ascui_get_box_data(Container_t container)
+box_data_t *ascui_get_box_data(container_t container)
 {
-	return (Box_data_t *)container.container_type_data;
+	return (box_data_t *)container.container_type_data;
 }
 
-Container_t ascui_create_box(bool open, Size_Type_e s_type, uint_t size, Container_orientation_e orientation, 
-								uint_t n_subcontainers, Container_style_t style)
+container_t ascui_create_box(bool open, size_type_e s_type, uchar_t size, container_orientation_e orientation, 
+								uint_t n_subcontainers, container_style_t style)
 {
-	Container_t box = create_container_stub(open, s_type, size, BOX);
-	box.container_type_data = calloc(1, sizeof(Box_data_t));
+	container_t box = create_container_stub(open, s_type, size, BOX);
+	box.container_type_data = calloc(1, sizeof(box_data_t));
 	
-	Box_data_t *b_data = ascui_get_box_data(box);
+	box_data_t *b_data = ascui_get_box_data(box);
 
 	b_data->style = style;
 	b_data->orientation = orientation;
 	b_data->n_subcontainers = n_subcontainers;
 	if (n_subcontainers != 0)
-			b_data->subcontainers = calloc(n_subcontainers, sizeof(Container_t)); // container owns subcontainers
+			b_data->subcontainers = calloc(n_subcontainers, sizeof(container_t)); // container owns subcontainers
 
 	return box;
 }
 
-Text_data_t *ascui_get_text_data(Container_t container)
+text_data_t *ascui_get_text_data(container_t container)
 {
-	return (Text_data_t *)container.container_type_data;
+	return (text_data_t *)container.container_type_data;
 }
 
-Container_t ascui_create_text(bool open, Size_Type_e s_type, uint_t size, uint_t text_len, char *text, Color text_col, Color bg_col)
+container_t ascui_create_text(bool open, size_type_e s_type, uchar_t size, uint_t text_len, char *text, container_style_t style)
 {
-	Container_t text_container = create_container_stub(open, s_type, size, TEXT);
-	text_container.container_type_data = calloc(1, sizeof(Text_data_t));
+	container_t text_container = create_container_stub(open, s_type, size, TEXT);
+	text_container.container_type_data = calloc(1, sizeof(text_data_t));
 	
-	Text_data_t *t_data = ascui_get_text_data(text_container);
+	text_data_t *t_data = ascui_get_text_data(text_container);
 
 	t_data->text = calloc(text_len, sizeof(char));
 	strcpy(t_data->text, text); // container owns text
 	
 	t_data->text_len = text_len;
-	t_data->text_col = text_col;
-	t_data->bg_col = bg_col;
+	t_data->style = style;
 	return text_container;
 }
 
-Subgrid_data_t *ascui_get_subgrid_data(Container_t container)
+subgrid_data_t *ascui_get_subgrid_data(container_t container)
 {
-	return (Subgrid_data_t *)container.container_type_data;
+	return (subgrid_data_t *)container.container_type_data;
 }
 
-Container_t ascui_create_subgrid(bool open, Size_Type_e s_type, uint_t size, Grid_t *subgrid, Color default_color, Font *default_font)
+container_t ascui_create_subgrid(bool open, size_type_e s_type, uchar_t size, grid_t *subgrid)
 {
-	Container_t subgrid_container = create_container_stub(open, s_type, size, SUBGRID);
-	subgrid_container.container_type_data = calloc(1, sizeof(Subgrid_data_t));
+	container_t subgrid_container = create_container_stub(open, s_type, size, SUBGRID);
+	subgrid_container.container_type_data = calloc(1, sizeof(subgrid_data_t));
 
-	Subgrid_data_t *subg_data = ascui_get_subgrid_data(subgrid_container);
+	subgrid_data_t *subg_data = ascui_get_subgrid_data(subgrid_container);
 
-	if (subgrid != NULL)
-		subg_data->subgrid = subgrid;
-	else
-		subg_data->subgrid = tl_init_grid(0,0, 10, 10, 4, 1.0f, 1000, default_color, default_font);
+	subg_data->subgrid = subgrid;
 
 	return subgrid_container;
 }
 
-Button_data_t *ascui_get_button_data(Container_t container)
+button_data_t *ascui_get_button_data(container_t container)
 {
-	return (Button_data_t *)container.container_type_data;
+	return (button_data_t *)container.container_type_data;
 }
 
-Container_t ascui_create_button(bool open, Size_Type_e s_type, uint_t size, 
-								Container_style_t style, UI_side_effect_func side_effect_func, uint_t text_len, char *text, void *domain, void *function_data)
+container_t ascui_create_button(bool open, size_type_e s_type, uchar_t size, 
+								container_style_t style, UI_side_effect_func side_effect_func, uint_t text_len, char *text, void *domain, void *function_data)
 {
-	Container_t button = create_container_stub(open, s_type, size, BUTTON);
-	button.container_type_data = calloc(1, sizeof(Button_data_t));
+	container_t button = create_container_stub(open, s_type, size, BUTTON);
+	button.container_type_data = calloc(1, sizeof(button_data_t));
 	
-	Button_data_t *bt_data = ascui_get_button_data(button);
+	button_data_t *bt_data = ascui_get_button_data(button);
 
 	bt_data->text = calloc(text_len, sizeof(char));
 	strcpy(bt_data->text, text); // container owns text
@@ -610,11 +605,11 @@ Container_t ascui_create_button(bool open, Size_Type_e s_type, uint_t size,
 }
 
 
-Container_t *ascui_get_nth_subcontainer(Container_t container, uint_t n)
+container_t *ascui_get_nth_subcontainer(container_t container, uint_t n)
 {
-	 Container_Type_e type = container.container_type;
+	 container_type_e type = container.container_type;
 
-	Container_t *subcontainers;
+	container_t *subcontainers;
 	uint_t n_subcontainers;
 	if(type == CONTAINER)
 	{
@@ -634,14 +629,14 @@ Container_t *ascui_get_nth_subcontainer(Container_t container, uint_t n)
 	return &(subcontainers[n]);
 }
 
-void ascui_set_nth_subcontainer(Container_t container, uint_t n, Container_t subcontainer)
+void ascui_set_nth_subcontainer(container_t container, uint_t n, container_t subcontainer)
 {
-	Container_t *subcontainer_address = ascui_get_nth_subcontainer(container, n);
+	container_t *subcontainer_address = ascui_get_nth_subcontainer(container, n);
 	*subcontainer_address = subcontainer;
 }
 
 
-static void _print_ui(Container_t container, uint_t indentation, bool last_child)
+static void _print_ui(container_t container, uint_t indentation, bool last_child)
 {
 	int line_len = 0;
 	putc('\n', stdout);
@@ -685,17 +680,17 @@ static void _print_ui(Container_t container, uint_t indentation, bool last_child
 	}
 
 	uint_t n_subcontainers;
-	Container_t *subcontainers;
+	container_t *subcontainers;
 	
 	if (container.container_type == CONTAINER)
 	{
-		Container_data_t c_data = *ascui_get_container_data(container);
+		container_data_t c_data = *ascui_get_container_data(container);
 		n_subcontainers = c_data.n_subcontainers;
 		subcontainers = c_data.subcontainers;
 	}
 	else if (container.container_type == BOX)
 	{
-		Box_data_t b_data = *ascui_get_box_data(container);
+		box_data_t b_data = *ascui_get_box_data(container);
 		n_subcontainers = b_data.n_subcontainers;
 		subcontainers = b_data.subcontainers;
 	}
@@ -705,17 +700,17 @@ static void _print_ui(Container_t container, uint_t indentation, bool last_child
 		_print_ui(subcontainers[i], indentation + 1, (i == n_subcontainers - 1));
 }
 
-void ascui_print_ui(Container_t container)
+void ascui_print_ui(container_t container)
 {
 	_print_ui(container, 0, false);
 	putc('\n', stdout);
 }
 
-void ascui_destroy(Container_t container)
+void ascui_destroy(container_t container)
 {
-	Container_Type_e type = container.container_type;
+	container_type_e type = container.container_type;
 
-	Container_t *subcontainers;
+	container_t *subcontainers;
 	uint_t n_subcontainers = 0;
 	if(type == CONTAINER)
 	{
@@ -745,24 +740,24 @@ void ascui_destroy(Container_t container)
 // The tag list is meant to be filled with tag-container pairs during program setup for easy fetching of specific containers
 // Potential improvements: Hashing?
 
-Container_tag_list_t ascui_tag_list_create(uint_t init_capacity)
+container_tag_list_t ascui_tag_list_create(uint_t init_capacity)
 {
-	Container_tag_list_t list;
+	container_tag_list_t list;
 	list.capacity = init_capacity;
 	list.count = 0;
-	list.tags = calloc(init_capacity, sizeof(Container_tag_t));
+	list.tags = calloc(init_capacity, sizeof(container_tag_t));
 	
 	return list;
 }
 
-void ascui_tag_list_add(Container_tag_list_t *list, Container_t *container, char *tag)
+void ascui_tag_list_add(container_tag_list_t *list, container_t *container, char *tag)
 {
 	assert(strlen(tag) <= TAG_MAX_LEN);
 
 	if (list->capacity <= list->count)
 	{
 		list->capacity *= REALLOC_PERCENTAGE_INCREASE; 
-		list->tags = (Container_tag_t *)realloc(list->tags, (list->capacity * sizeof(Container_tag_t)));
+		list->tags = (container_tag_t *)realloc(list->tags, (list->capacity * sizeof(container_tag_t)));
 	}
 
 	int comparison;
@@ -782,7 +777,7 @@ void ascui_tag_list_add(Container_tag_list_t *list, Container_t *container, char
 		if(comparison > 0)
 		{
 			// Move all tags from and including i one step forward
-			memmove(&list->tags[i + 1], &list->tags[i], (list->count - i) * sizeof(Container_tag_t));
+			memmove(&list->tags[i + 1], &list->tags[i], (list->count - i) * sizeof(container_tag_t));
 			
 			list->tags[i].container = container;
 			strcpy(list->tags[i].tag, tag);
@@ -795,7 +790,7 @@ void ascui_tag_list_add(Container_tag_list_t *list, Container_t *container, char
 	}
 	list->count++;
 }
-Container_t *ascui_tag_list_get(Container_tag_list_t list, char *tag)
+container_t *ascui_tag_list_get(container_tag_list_t list, char *tag)
 {
 	// binary search
 	uint_t search_area_min = 0;
@@ -821,12 +816,12 @@ Container_t *ascui_tag_list_get(Container_tag_list_t list, char *tag)
 	return NULL; // tag not present
 }
 
-void ascui_tag_list_destroy(Container_tag_list_t list)
+void ascui_tag_list_destroy(container_tag_list_t list)
 {
 	free(list.tags);
 }
 
-void ascui_tag_list_print(Container_tag_list_t list)
+void ascui_tag_list_print(container_tag_list_t list)
 {
 	printf("\nTag list [capacity=%u, count=%u]", list.capacity, list.count);
 	for (uint_t i = 0; i < list.capacity; i++)
@@ -920,19 +915,23 @@ uint_t count_subcontainers(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, int pa
 }
 
 // assumes strtok already initialized
-Color parse_color()
+color8b_t parse_color8b()
 {
-	uint_t r = atoi(strtok(NULL, DELIMITATORS));
-	uint_t g = atoi(strtok(NULL, DELIMITATORS));
-	uint_t b = atoi(strtok(NULL, DELIMITATORS));
-	return c(r,g,b);
+	char *tok = strtok(NULL, DELIMITATORS);
+	uint_t r = atoi(tok);
+	tok = strtok(NULL, DELIMITATORS);
+	uint_t g = atoi(tok);
+	tok = strtok(NULL, DELIMITATORS);
+	uint_t b = atoi(tok);
+	return col8bt(umin(r, 7),umin(g, 7),umin(b, 3));
 }
 
-void parse_style(char line[MAX_LINE_LEN], Container_style_t *style_list)
+void parse_style(char line[MAX_LINE_LEN], container_style_t *style_list)
 {
-	Color bg_col;
-    Color border_col;
-    Color char_col;
+	char font;
+	color8b_t bg_col;
+    color8b_t border_col;
+    color8b_t char_col;
     char border_h_symbol;
     char border_v_symbol;
     char corner_symbol;
@@ -940,11 +939,14 @@ void parse_style(char line[MAX_LINE_LEN], Container_style_t *style_list)
 	char *tok = strtok(line, DELIMITATORS);
 	index = atoi(&tok[1]);
 
-	bg_col = parse_color();
-	
-	border_col = parse_color();
+	tok = strtok(NULL, DELIMITATORS);
+	font = atoi(tok);
 
-	char_col = parse_color();
+	bg_col = parse_color8b();
+	
+	border_col = parse_color8b();
+
+	char_col = parse_color8b();
 
 	tok = strtok(NULL , DELIMITATORS);
 	border_h_symbol = *tok;
@@ -953,7 +955,7 @@ void parse_style(char line[MAX_LINE_LEN], Container_style_t *style_list)
 	tok = strtok(NULL , DELIMITATORS);
 	corner_symbol = *tok;
 
-	style_list[index] = style(bg_col, border_col, char_col, border_h_symbol, border_v_symbol, corner_symbol);
+	style_list[index] = style(font, bg_col, border_col, char_col, border_h_symbol, border_v_symbol, corner_symbol);
 }
 
 char tab_followed_char(char line[MAX_LINE_LEN])
@@ -966,9 +968,9 @@ char tab_followed_char(char line[MAX_LINE_LEN])
 	return 0;
 }
 
-uint_t insert_child_container_into_parent(Container_t child, Container_t *parent)
+uint_t insert_child_container_into_parent(container_t child, container_t *parent)
 {
-	Container_t *subcontainers;
+	container_t *subcontainers;
 	uint_t n_subcontainers;
 	if (parent->container_type == CONTAINER)
 	{
@@ -995,11 +997,11 @@ uint_t insert_child_container_into_parent(Container_t child, Container_t *parent
 	ERROR("\nChild insertion error: cannot fit child into parent.")	
 }
 
-void parse_container_tree(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_parent, 
-						Container_tag_list_t *tag_list, Container_style_t style_list[MAX_STYLES]);
+void parse_container_tree(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, container_t *c_parent, 
+						container_tag_list_t *tag_list, container_style_t style_list[MAX_STYLES]);
 
-void parse_subcontainers(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, int parent_indentation, Container_t *c_parent,
-						Container_tag_list_t *tag_list, Container_style_t style_list[MAX_STYLES])
+void parse_subcontainers(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, int parent_indentation, container_t *c_parent,
+						container_tag_list_t *tag_list, container_style_t style_list[MAX_STYLES])
 {
 	uint_t c_indentation;
 	for (uint_t c_line = i + 1; c_line < (uint_t)N_LINES; c_line++)
@@ -1017,15 +1019,15 @@ void parse_subcontainers(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, int pare
 	}
 }
 
-void parse_container(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_parent, 
-						Container_tag_list_t *tag_list, Container_style_t style_list[MAX_STYLES])
+void parse_container(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, container_t *c_parent, 
+						container_tag_list_t *tag_list, container_style_t style_list[MAX_STYLES])
 {
 	char tag[TAG_MAX_LEN];
 	tag[0] = 0;
 	bool open = true;
-	Size_Type_e s_type = TILES;
+	size_type_e s_type = TILES;
 	uint_t size = 0;
-	Container_orientation_e orientation = VERTICAL;
+	container_orientation_e orientation = VERTICAL;
 	uint_t c_indentation = count_indentations(ui_file, i);
 	uint_t n_subcontainers = 0;
 	n_subcontainers = count_subcontainers(ui_file, i, c_indentation);
@@ -1046,9 +1048,6 @@ void parse_container(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t 
 			case PARAM_PERCENTAGE:
 				s_type = PERCENTAGE;
 				size = atoi(&tok[2]);
-				break;
-			case PARAM_GROW:
-				s_type = GROW;
 				break;
 			case FLAG_VERTICAL:
 				orientation = VERTICAL;
@@ -1072,9 +1071,9 @@ void parse_container(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t 
 	}
 	
 
-	Container_t new_container = ascui_create_container(open, s_type, size, orientation, n_subcontainers);
+	container_t new_container = ascui_create_container(open, s_type, size, orientation, n_subcontainers);
 	uint_t index = insert_child_container_into_parent(new_container, c_parent);
-	Container_t *new_container_ptr = ascui_get_nth_subcontainer(*c_parent, index);
+	container_t *new_container_ptr = ascui_get_nth_subcontainer(*c_parent, index);
 	
 	if (tag[0] != 0)
 		ascui_tag_list_add(tag_list, new_container_ptr, tag);
@@ -1083,19 +1082,19 @@ void parse_container(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t 
 		parse_subcontainers(ui_file, i, c_indentation, new_container_ptr, tag_list, style_list);
 }
 
-void parse_box(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_parent, 
-						Container_tag_list_t *tag_list, Container_style_t style_list[MAX_STYLES])
+void parse_box(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, container_t *c_parent, 
+						container_tag_list_t *tag_list, container_style_t style_list[MAX_STYLES])
 {
 	char tag[TAG_MAX_LEN];
 	tag[0] = 0;
 	bool open = true;
-	Size_Type_e s_type = TILES;
+	size_type_e s_type = TILES;
 	uint_t size = 0;
-	Container_orientation_e orientation = VERTICAL;
+	container_orientation_e orientation = VERTICAL;
 	uint_t c_indentation = count_indentations(ui_file, i);
 	uint_t n_subcontainers = 0;
 	n_subcontainers = count_subcontainers(ui_file, i, c_indentation);
-	Container_style_t style = style_list[0]; // 0 as default
+	container_style_t style = style_list[0]; // 0 as default
 
 	char *tok;
 	
@@ -1116,9 +1115,6 @@ void parse_box(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_par
 			case PARAM_PERCENTAGE:
 				s_type = PERCENTAGE;
 				size = atoi(&tok[2]);
-				break;
-			case PARAM_GROW:
-				s_type = GROW;
 				break;
 			case FLAG_VERTICAL:
 				orientation = VERTICAL;
@@ -1143,9 +1139,9 @@ void parse_box(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_par
 	}
 	
 
-	Container_t new_container = ascui_create_box(open, s_type, size, orientation, n_subcontainers, style);
+	container_t new_container = ascui_create_box(open, s_type, size, orientation, n_subcontainers, style);
 	uint_t index = insert_child_container_into_parent(new_container, c_parent);
-	Container_t *new_container_ptr = ascui_get_nth_subcontainer(*c_parent, index);
+	container_t *new_container_ptr = ascui_get_nth_subcontainer(*c_parent, index);
 	
 	if (tag[0] != 0)
 		ascui_tag_list_add(tag_list, new_container_ptr, tag);
@@ -1165,8 +1161,8 @@ void replace_underscores(char *str)
 	}
 }
 
-void parse_text(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_parent, 
-						Container_tag_list_t *tag_list, Container_style_t style_list[MAX_STYLES])
+void parse_text(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, container_t *c_parent, 
+						container_tag_list_t *tag_list, container_style_t style_list[MAX_STYLES])
 {
 	char tag[TAG_MAX_LEN];
 	tag[0] = 0;
@@ -1176,9 +1172,9 @@ void parse_text(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_pa
 	int txt_index = -1;
 	
 	bool open = true;
-	Size_Type_e s_type = TILES;
+	size_type_e s_type = TILES;
 	uint_t size = 0;
-	Container_style_t style = style_list[0]; // 0 as default
+	container_style_t style = style_list[0]; // 0 as default
 
 	char *tok;
 	
@@ -1197,14 +1193,11 @@ void parse_text(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_pa
 				s_type = PERCENTAGE;
 				size = atoi(&tok[2]);
 				break;
-			case PARAM_GROW:
-				s_type = GROW;
-				break;
 			case FLAG_VERTICAL:
-				WARNINGF("\nContainer-parsing error: text does not need orientation - at line %u.", i)
+				WARNINGF("\nContainer-parsing warning: text does not need orientation - at line %u.", i)
 				break;
 			case FLAG_HORIZONTAL:
-				WARNINGF("\nContainer-parsing error: text does not need orientation - at line %u.", i)
+				WARNINGF("\nContainer-parsing warning: text does not need orientation - at line %u.", i)
 				break;
 			case PARAM_STYLE:
 				style = style_list[atoi(&tok[2])]; // defaults to $:0 on error
@@ -1230,23 +1223,23 @@ void parse_text(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_pa
 	}
 	
 
-	Container_t new_container;
+	container_t new_container;
 
 	if(txt_index == -1) // Text from parameter
-	 	new_container = ascui_create_text(open, s_type, size, strlen(txt), txt, style.char_col, style.bg_col);
+	 	new_container = ascui_create_text(open, s_type, size, strlen(txt), txt, style);
 	else 				// Text from texts[txt_index]
-	 	new_container = ascui_create_text(open, s_type, size, strlen(texts[txt_index]), texts[txt_index], style.char_col, style.bg_col);
+	 	new_container = ascui_create_text(open, s_type, size, strlen(texts[txt_index]), texts[txt_index], style);
 
 	uint_t index = insert_child_container_into_parent(new_container, c_parent);
-	Container_t *new_container_ptr = ascui_get_nth_subcontainer(*c_parent, index);
+	container_t *new_container_ptr = ascui_get_nth_subcontainer(*c_parent, index);
 	
 	if (tag[0] != 0)
 		ascui_tag_list_add(tag_list, new_container_ptr, tag);
 }
 
 
-void parse_button(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_parent, 
-						Container_tag_list_t *tag_list, Container_style_t style_list[MAX_STYLES])
+void parse_button(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, container_t *c_parent, 
+						container_tag_list_t *tag_list, container_style_t style_list[MAX_STYLES])
 {
 	char tag[TAG_MAX_LEN];
 	tag[0] = 0;
@@ -1256,9 +1249,9 @@ void parse_button(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_
 	int txt_index = -1;
 	
 	bool open = true;
-	Size_Type_e s_type = TILES;
+	size_type_e s_type = TILES;
 	uint_t size = 0;
-	Container_style_t style = style_list[0]; // 0 as default
+	container_style_t style = style_list[0]; // 0 as default
 
 	char *tok;
 	
@@ -1277,14 +1270,11 @@ void parse_button(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_
 				s_type = PERCENTAGE;
 				size = atoi(&tok[2]);
 				break;
-			case PARAM_GROW:
-				s_type = GROW;
-				break;
 			case FLAG_VERTICAL:
-				WARNINGF("\nContainer-parsing error: button does not need orientation - at line %u.", i)
+				WARNINGF("\nContainer-parsing warning: button does not need orientation - at line %u.", i)
 				break;
 			case FLAG_HORIZONTAL:
-				WARNINGF("\nContainer-parsing error: button does not need orientation - at line %u.", i)
+				WARNINGF("\nContainer-parsing warning: button does not need orientation - at line %u.", i)
 				break;
 			case PARAM_STYLE:
 				style = style_list[atoi(&tok[2])]; // defaults to $:0 on error
@@ -1310,7 +1300,7 @@ void parse_button(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_
 	}
 	
 
-	Container_t new_container;
+	container_t new_container;
 
 	if(txt_index == -1) // Text from parameter
 	 	new_container = ascui_create_button(open, s_type, size, style, NULL, strlen(txt), txt, NULL, NULL);
@@ -1318,29 +1308,21 @@ void parse_button(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_
 	 	new_container = ascui_create_button(open, s_type, size, style, NULL, strlen(texts[txt_index]), texts[txt_index], NULL, NULL);
 
 	uint_t index = insert_child_container_into_parent(new_container, c_parent);
-	Container_t *new_container_ptr = ascui_get_nth_subcontainer(*c_parent, index);
+	container_t *new_container_ptr = ascui_get_nth_subcontainer(*c_parent, index);
 	
 	if (tag[0] != 0)
 		ascui_tag_list_add(tag_list, new_container_ptr, tag);
 }
 
-void parse_subgrid(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_parent, 
-						Container_tag_list_t *tag_list, Container_style_t style_list[MAX_STYLES])
+void parse_subgrid(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, container_t *c_parent, 
+						container_tag_list_t *tag_list, container_style_t style_list[MAX_STYLES])
 {
 	char tag[TAG_MAX_LEN];
 	tag[0] = 0;
-	char txt[MAX_LINE_LEN];
-	txt[0] = 0;
-
-	int txt_index = -1;
 	
 	bool open = true;
-	Size_Type_e s_type = TILES;
+	size_type_e s_type = TILES;
 	uint_t size = 0;
-	Container_style_t style = style_list[0]; // 0 as default
-	float tile_h_to_w_ratio = 1.0f;
-	uint_t width = 10;
-	uint_t max_tile_count = 1800;
 	char *tok;
 	
 	while ((tok = strtok(NULL , DELIMITATORS)))
@@ -1358,26 +1340,14 @@ void parse_subgrid(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c
 				s_type = PERCENTAGE;
 				size = atoi(&tok[2]);
 				break;			
-			case 'r':
-				tile_h_to_w_ratio = atof(&tok[2]);
-				break;
-			case 'w':
-				width = atoi(&tok[2]);
-				break;
-			case 'M':
-				max_tile_count = atoi(&tok[2]);
-				break;
-			case PARAM_GROW:
-				s_type = GROW;
-				break;
 			case FLAG_VERTICAL:
-				WARNINGF("\nContainer-parsing error: subgrid does not need orientation - at line %u.", i)
+				WARNINGF("\nContainer-parsing warning: subgrid does not need orientation - at line %u.", i)
 				break;
 			case FLAG_HORIZONTAL:
-				WARNINGF("\nContainer-parsing error: subgrid does not need orientation - at line %u.", i)
+				WARNINGF("\nContainer-parsing warning: subgrid does not need orientation - at line %u.", i)
 				break;
 			case PARAM_STYLE:
-				WARNINGF("\nContainer-parsing error: subgrid does not need style - at line %u.", i)
+				WARNINGF("\nContainer-parsing warning: subgrid does not need style - at line %u.", i)
 				break;
 			case PARAM_TAG:
 				strcpy(tag, &tok[1]);
@@ -1386,24 +1356,26 @@ void parse_subgrid(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c
 				open = false;
 				break;
 			case PARAM_TEXT:
-				WARNINGF("\nContainer-parsing error: subgrid does not need text - at line %u.", i)
+				WARNINGF("\nContainer-parsing warning: subgrid does not need text - at line %u.", i)
 				break;
 			default:
 				ERRORF("\nContainer-parsing error: unknown argument at line %u.", i)
 		}
 	}
 	
-	Grid_t *subgrid = tl_init_grid(0,0,0,0, width, tile_h_to_w_ratio, max_tile_count, c(0,0,0), NULL);
-	Container_t new_container = ascui_create_subgrid(open, s_type, size, subgrid, c(0,0,0), NULL);
+	container_t new_container = ascui_create_subgrid(open, s_type, size, NULL);
 
 	uint_t index = insert_child_container_into_parent(new_container, c_parent);
-	Container_t *new_container_ptr = ascui_get_nth_subcontainer(*c_parent, index);
+	container_t *new_container_ptr = ascui_get_nth_subcontainer(*c_parent, index);
 	
 	if (tag[0] != 0)
 		ascui_tag_list_add(tag_list, new_container_ptr, tag);
+	else
+		WARNINGF("\nContainer-parsing warning: subgrid does not have a tag at line %u. (which is recommended)", i)
+		
 }
-void parse_container_tree(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Container_t *c_parent, 
-						Container_tag_list_t *tag_list, Container_style_t style_list[MAX_STYLES])
+void parse_container_tree(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, container_t *c_parent, 
+						container_tag_list_t *tag_list, container_style_t style_list[MAX_STYLES])
 {
 	uint_t c_indentation = count_indentations(ui_file, i);
 	// 									V	start tokenization after tabs
@@ -1427,7 +1399,7 @@ void parse_container_tree(char ui_file[N_LINES][MAX_LINE_LEN], uint_t i, Contain
 }
 
 
-Container_t *ascui_construct_ui_from_file(char *ui_file_path, Container_tag_list_t *tag_list)
+container_t *ascui_construct_ui_from_file(char *ui_file_path, container_tag_list_t *tag_list)
 {	
 	FILE *file = fopen(ui_file_path, "r");
 	if (file == NULL) {
@@ -1457,8 +1429,8 @@ Container_t *ascui_construct_ui_from_file(char *ui_file_path, Container_tag_list
  	}
 	fclose(file);
 
-	Container_style_t style_list[MAX_STYLES];
-	Container_style_t *style_list_ptr = &(style_list[0]);
+	container_style_t style_list[MAX_STYLES];
+	container_style_t *style_list_ptr = &(style_list[0]);
 
 	uint_t i;
 	// Parse styles
@@ -1473,9 +1445,9 @@ Container_t *ascui_construct_ui_from_file(char *ui_file_path, Container_tag_list
 
 	assert(ui_file[i][0] == FLAG_HORIZONTAL || ui_file[i][0] == FLAG_VERTICAL);
 
-	Container_orientation_e top_c_orientation = (ui_file[i][0] == FLAG_HORIZONTAL)? HORIZONTAL : VERTICAL;
+	container_orientation_e top_c_orientation = (ui_file[i][0] == FLAG_HORIZONTAL)? HORIZONTAL : VERTICAL;
 
-	Container_t *top_container = calloc(1, sizeof(Container_t));
+	container_t *top_container = calloc(1, sizeof(container_t));
 	*top_container = ascui_create_container(true, PERCENTAGE, 100, top_c_orientation, 
 											count_subcontainers(ui_file, 0, -1));
 

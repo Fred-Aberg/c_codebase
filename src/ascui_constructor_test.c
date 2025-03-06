@@ -8,15 +8,18 @@
 
 #define DEF_COLOR (Color){20, 40, 29, 255}
 
-void dropdown_button(void *domain, void *function_data, Cursor_t *cursor)
+void dropdown_button(void *domain, void *function_data, cursor_t *cursor)
 {
 	if (!cursor->left_button_pressed)
 		return;
-	Container_t *container = (Container_t *)domain; 
+	container_t *container = (container_t *)domain; 
 	container->open = !container->open;
 }
 
 int main(){
+
+	printf("\nSTRUCT-SIZES [BYTES]:\n\t BG_INS=%lu\n\t SMBL_INS=%lu\n\t GEN_INS=%lu\n", sizeof(bg_instruction_t), sizeof(smbl_instruction_t), sizeof(instruction_t));
+
 	double tl_rendering_time;
 	double total_tl_rendering_time = 0;
 	double ascui_drawing_time;
@@ -65,29 +68,34 @@ int main(){
 
 
     InitWindow(screensize_x, screensize_y, "ascui_constr_test");
-    Font square_font = LoadFontEx("Resources/Fonts/unscii-8-alt.ttf", 32, 0, 252);
+    Font unscii = LoadFontEx("Resources/Fonts/unscii-8-alt.ttf", 32, 0, 256);
+    Font unscii_fantasy = LoadFontEx("Resources/Fonts/unscii-8-fantasy.ttf", 32, 0, 256);
+
+	Font fonts[2] = {unscii, unscii_fantasy};
+    
     SetTargetFPS(60);
     HideCursor();
     SetWindowMinSize(200, 200);
 
 	// Main Grid
-	Grid_t *main_grid = tl_init_grid(0, 0, screensize_x, screensize_y, tile_width, 1.0f, CALCULATE_MAX_TILES, DEF_COLOR, &square_font);
-	Grid_t *subgrid;
+	grid_t *main_grid = tl_init_grid(0, 0, screensize_x, screensize_y, tile_width, 1.0f, fonts, 200);
+	grid_t *subgrid = tl_init_grid(0, 0, 100, 100, tile_width, 1.0f, fonts, 200);
 	// UI
-	Container_tag_list_t tag_list = ascui_tag_list_create(10);
-	Container_t *top_container = ascui_construct_ui_from_file("src/test.ui", &tag_list);
+	container_tag_list_t tag_list = ascui_tag_list_create(10);
+	container_t *top_container = ascui_construct_ui_from_file("src/test.ui", &tag_list);
+	// Set map_view subgrid
+	container_t *subgrid_container = ascui_tag_list_get(tag_list, "map_view");
+	ascui_get_subgrid_data(*subgrid_container)->subgrid = subgrid;
 
-	Container_t *subgrid_container = ascui_tag_list_get(tag_list, "map_view");
-	subgrid = ascui_get_subgrid_data(*subgrid_container)->subgrid;
-
-	subgrid->default_font = &square_font;
-	
-	Cursor_t cursor; 
+	cursor_t cursor; 
 
 	ascui_tag_list_print(tag_list);
 	ascui_print_ui(*top_container);
+
 	
     while (!WindowShouldClose()){
+		tl_print_grid_info(subgrid);
+    
     	tick++;
 		frame_time = -GetTime();
     
@@ -98,13 +106,13 @@ int main(){
 
 		if(IsKeyDown(45))
 		{
-			uint_t new_tile_size = main_grid->tile_width + 1;
+			uint_t new_tile_size = main_grid->tile_p_w + 1;
 			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, new_tile_size);
 			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}
 		else if(IsKeyDown(47))
 		{
-			uint_t new_tile_size = main_grid->tile_width - 1;
+			uint_t new_tile_size = main_grid->tile_p_w - 1;
 			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, new_tile_size);
 			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}
@@ -115,7 +123,7 @@ int main(){
 			screensize_x = GetScreenWidth();
 			screensize_y = GetScreenHeight();
 			
-			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, main_grid->tile_width);
+			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, main_grid->tile_p_w);
 			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}
 		
@@ -128,9 +136,8 @@ int main(){
 		cursor.scroll = GetMouseWheelMove();
 
 
-		Pos_t main_grid_size = tl_grid_get_size(main_grid);
-		tl_draw_rect(main_grid, 0,0, main_grid_size.x - 1, main_grid_size.y - 1, NO_SMBL, NO_COL, c(0,0,0), NULL);
-
+		// Pos_t main_grid_size = tl_grid_get_dimensions(main_grid);
+		
 		ascui_drawing_time = -GetTime();
 		ascui_draw_ui(main_grid, top_container, &cursor);
 		ascui_drawing_time += GetTime();
@@ -139,7 +146,7 @@ int main(){
 		{
 			if (cursor.hovered_container->container_type == BUTTON)
 			{
-				Button_data_t *bt_data = ascui_get_button_data(*cursor.hovered_container);
+				button_data_t *bt_data = ascui_get_button_data(*cursor.hovered_container);
 				if(bt_data->side_effect_func)
 					bt_data->side_effect_func(bt_data->domain, bt_data->function_data, &cursor);
 			}
@@ -153,18 +160,18 @@ int main(){
 			if(cursor.hovered_container == cursor.selected_container && cursor.right_button_pressed)
 				cursor.selected_container = NULL;
 		}
-		printf("\nhov=[%p] sel[%p]", cursor.hovered_container, cursor.selected_container);
+		// printf("\nhov=[%p] sel[%p]", cursor.hovered_container, cursor.selected_container);
 
-		Pos_t subgrid_size = tl_grid_get_size(subgrid);
-		tl_draw_rect(subgrid, 0,0, subgrid_size.x - 1, subgrid_size.y - 1, '.', c(100, 20, 100), c(50,10,50), NULL);
+		Pos_t subgrid_size = tl_grid_get_dimensions(subgrid);
+		tl_draw_rect_smbl_w_bg(subgrid, 0, 0, subgrid_size.x - 1, subgrid_size.y - 1, '.', col8bt(5, 1, 2), col8bt(3, 0, 1), 1);
 
 		if(cursor.hovered_container == subgrid_container)
 		{
 			mouse_grid_pos = tl_screen_to_grid_coords(subgrid, mouse_scr_pos);
-			tl_draw_tile(subgrid, mouse_grid_pos.x, mouse_grid_pos.y, 'A', WHITE, DEF_COLOR, &square_font);
+			tl_plot_smbl_w_bg(subgrid, mouse_grid_pos.x, mouse_grid_pos.y, 'A', WHITE8B, BLACK8B, 1);
 		}
 		else
-			tl_draw_tile(main_grid, mouse_grid_pos.x, mouse_grid_pos.y, 'A', WHITE, DEF_COLOR, &square_font);
+			tl_plot_smbl_w_bg(main_grid, mouse_grid_pos.x, mouse_grid_pos.y, 'A', WHITE8B, BLACK8B, 0);
 
 		tl_rendering_time = -GetTime();
 		Pos_t main_grid_dcalls = tl_render_grid(main_grid);
@@ -207,7 +214,8 @@ int main(){
 
         EndDrawing();
     }
-    UnloadFont(square_font);
+    UnloadFont(unscii);
+    UnloadFont(unscii_fantasy);
     CloseWindow();
     // ascui_destroy(top_container);
 	tl_deinit_grid(main_grid);

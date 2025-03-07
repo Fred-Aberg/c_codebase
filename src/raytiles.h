@@ -24,10 +24,10 @@ color8b_t tl_Color_to_color8b(Color col);
 
 typedef struct 
 {
-	char x0;
-	char y0;
-	char x1;
-	char y1;
+	uchar_t x0;
+	uchar_t y0;
+	uchar_t x1;
+	uchar_t y1;
 }rect_t;						// 32 bits = 4 bytes
 
 typedef struct

@@ -41,17 +41,18 @@ void sanitize_tile_p_w(grid_t *grid)
 }
 
 // r <= 7, g <= 7, b <= 3, otherwise undefined behaviour
-color8b_t col8bt(char r, char b, char g)
+color8b_t col8bt(char r, char g, char b)
 {
 	return ( r<<5 ) + ( g<<2 ) + b;
 }
-
-const char convert_3b_to_8b[8] = {0, 32, 64, 96, 128, 160, 192, 255};
-const char convert_2b_to_8b[4] = {0, 64, 128, 255};
+								   //0  1   2   3   4    5    6    7
+const uchar_t convert_3b_to_8b[8] = {0, 32, 64, 96, 128, 160, 192, 255};
+const uchar_t convert_2b_to_8b[4] = {0, 	64, 	128, 	 	   255};
+								   //0      1       2              3
 
 Color tl_color8b_to_Color(color8b_t col)
 {
-							// 1110000						00011100							00000011
+							// 11100000						00011100							00000011
 	return c(convert_3b_to_8b[(col & 224)>>5], convert_3b_to_8b[(col & 28)>>2], convert_2b_to_8b[col & 3]);
 }
 

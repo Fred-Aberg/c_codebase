@@ -16,6 +16,25 @@ void dropdown_button(void *domain, void *function_data, cursor_t *cursor)
 	container->open = !container->open;
 }
 
+
+container_t *top_container;
+container_t *subgrid_container;
+
+void main_ui()
+{
+	container_style_t s_0 = style(0, col8bt(0,0,0), col8bt(5,0,2), col8bt(7,7,3), '=', '|', '+');
+	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
+	top_container = ascui_container(true, PERCENTAGE, 100, VERTICAL, 2,
+		ascui_box(true, PERCENTAGE, 30, HORIZONTAL, s_0, 4, 
+			ascui_text(true, TILES, 3, strlen("Tool Box"), "Tool Box", s_1),
+			ascui_button(true, TILES, 5, strlen("Sea"), "Sea", s_1, NULL, NULL, NULL),
+			ascui_button(true, TILES, 5, strlen("Grasslands"), "Grasslands", s_1, NULL, NULL, NULL),
+			ascui_button(true, TILES, 5, strlen("Mountains"), "Mountains", s_1, NULL, NULL, NULL)
+		),
+		(subgrid_container = ascui_subgrid(true, TILES, 1, NULL))
+	);
+}
+
 int main(){
 
 	printf("\nSTRUCT-SIZES [BYTES]:\n\t BG_INS=%lu\n\t SMBL_INS=%lu\n\t GEN_INS=%lu\n", sizeof(bg_instruction_t), sizeof(smbl_instruction_t), sizeof(instruction_t));
@@ -64,8 +83,6 @@ int main(){
 			return 0;
 		}	
    	}
-	
-
 
     InitWindow(screensize_x, screensize_y, "ascui_constr_test");
     Font unscii = LoadFontEx("Resources/Fonts/unscii-8-alt.ttf", 32, 0, 256);
@@ -81,16 +98,12 @@ int main(){
 	grid_t *main_grid = tl_init_grid(0, 0, screensize_x, screensize_y, tile_width, 1.0f, fonts, 200);
 	grid_t *subgrid = tl_init_grid(0, 0, 100, 100, tile_width, 1.0f, fonts, 200);
 	// UI
-	container_tag_list_t tag_list = ascui_tag_list_create(10);
-	container_t *top_container = ascui_construct_ui_from_file("src/test.ui", &tag_list);
-	// Set map_view subgrid
-	container_t *subgrid_container = ascui_tag_list_get(tag_list, "map_view");
-	ascui_get_subgrid_data(*subgrid_container)->subgrid = subgrid;
-
+	main_ui();
+	ascui_get_subgrid_data(subgrid_container)->subgrid = subgrid;
 	cursor_t cursor; 
+	ascui_print_ui(top_container);
 
-	ascui_tag_list_print(tag_list);
-	ascui_print_ui(*top_container);
+
 
 	
     while (!WindowShouldClose()){
@@ -146,7 +159,7 @@ int main(){
 		{
 			if (cursor.hovered_container->container_type == BUTTON)
 			{
-				button_data_t *bt_data = ascui_get_button_data(*cursor.hovered_container);
+				button_data_t *bt_data = ascui_get_button_data(cursor.hovered_container);
 				if(bt_data->side_effect_func)
 					bt_data->side_effect_func(bt_data->domain, bt_data->function_data, &cursor);
 			}

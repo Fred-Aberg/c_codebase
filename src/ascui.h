@@ -3,6 +3,7 @@
 #include "raytiles.h"
 #include "raylib.h"
 #include <stdbool.h>
+#include <stdarg.h>
 
 #define NO_COLOR (Color){0, 0, 0, 0}
 #define style(font, bg_col, border_col, char_col, border_h_symbol, border_v_symbol, corner_symbol) (container_style_t){font, bg_col, border_col, char_col, border_h_symbol, border_v_symbol, corner_symbol}
@@ -56,14 +57,14 @@ typedef struct
 {
 	container_orientation_e orientation;
 	uint_t n_subcontainers;
-	container_t *subcontainers;
+	container_t **subcontainers;
 }container_data_t;
 
 typedef struct
 {
 	container_orientation_e orientation;
 	uint_t n_subcontainers;
-	container_t *subcontainers;
+	container_t **subcontainers;
 	container_style_t style;
 }box_data_t;
 
@@ -136,53 +137,35 @@ typedef struct
 	uint_t count;
 }container_tag_list_t;
 
+/////
+container_t *ascui_container(bool open, size_type_e s_type, uchar_t size, container_orientation_e orientation, uint_t n_subcontainers, ...);
 
+container_t *ascui_box(bool open, size_type_e s_type, uchar_t size, container_orientation_e orientation, container_style_t style, uint_t n_subcontainers, ...);
+
+container_t *ascui_text(bool open, size_type_e s_type, uchar_t size, uint_t text_len, char *text, container_style_t style);
+
+container_t *ascui_subgrid(bool open, size_type_e s_type, uchar_t size, grid_t *subgrid);
+
+container_t *ascui_button(bool open, size_type_e s_type, uchar_t size, uint_t text_len, char *text, container_style_t style, 
+						  UI_side_effect_func side_effect_func, void *domain, void *function_data);
+////
 
 void ascui_draw_ui(grid_t *grid, container_t *top_container, cursor_t *cursor);
 
-container_t ascui_create_container(bool open, size_type_e s_type, uchar_t size,
-									container_orientation_e orientation, uint_t n_subcontainers);
-									
-container_data_t *ascui_get_container_data(container_t container);
+container_data_t *ascui_get_container_data(container_t *container);
 
-container_t ascui_create_box(bool open, size_type_e s_type, uchar_t size,
-									container_orientation_e orientation, uint_t n_subcontainers, container_style_t style);
+box_data_t *ascui_get_box_data(container_t *container);
 
-box_data_t *ascui_get_box_data(container_t container);
+text_data_t *ascui_get_text_data(container_t *container);
 
-container_t ascui_create_text(bool open, size_type_e s_type, uchar_t size, uint_t text_len, char *text, container_style_t style);
+subgrid_data_t *ascui_get_subgrid_data(container_t *container);
 
-text_data_t *ascui_get_text_data(container_t container);
+button_data_t *ascui_get_button_data(container_t *container);
 
-container_t ascui_create_subgrid(bool open, size_type_e s_type, uchar_t size, grid_t *subgrid);
+void ascui_set_nth_subcontainer(container_t *container, uint_t n, container_t *subcontainer);
 
-subgrid_data_t *ascui_get_subgrid_data(container_t container);
+container_t *ascui_get_nth_subcontainer(container_t *container, uint_t n);
 
-button_data_t *ascui_get_button_data(container_t container);
+void ascui_print_ui(container_t *container);
 
-container_t ascui_create_button(bool open, size_type_e s_type, uchar_t size, 
-								container_style_t style, UI_side_effect_func side_effect_func, uint_t text_len, char *text, void *domain, void *function_data);
-
-void ascui_set_nth_subcontainer(container_t container, uint_t n, container_t subcontainer);
-
-container_t *ascui_get_nth_subcontainer(container_t container, uint_t n);
-
-void ascui_print_ui(container_t container);
-
-void ascui_destroy(container_t container);
-
-// Tag list //
-
-container_tag_list_t ascui_tag_list_create(uint_t init_capacity);
-
-void ascui_tag_list_add(container_tag_list_t *list, container_t *container, char *tag);
-
-container_t *ascui_tag_list_get(container_tag_list_t list, char *tag);
-
-void ascui_tag_list_destroy(container_tag_list_t list);
-
-void ascui_tag_list_print(container_tag_list_t list);
-
-// UI Constructor //
-
-container_t *ascui_construct_ui_from_file(char *ui_file_path, container_tag_list_t *tag_list);
+void ascui_destroy(container_t *container);

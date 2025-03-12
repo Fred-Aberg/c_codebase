@@ -111,14 +111,47 @@ void draw_rect(grid_rendering_data_t g_data, uchar_t x0, uchar_t y0, uchar_t x1,
 uint_t render_smbl_instruction(grid_rendering_data_t g_data, smbl_instruction_t smbl_instruction)
 {
 	uint_t draw_calls = 0;
+	// uint_t instruction_width = smbl_instruction.rect.x1 - smbl_instruction.rect.x0 + 1;
+	// uint_t instruction_height = smbl_instruction.rect.y1 - smbl_instruction.rect.y0 + 1;
+	// 
+	// char buf[(instruction_width + 1) * instruction_height + 1];
+	// for (uchar_t _y = 0; _y < instruction_height; _y++)
+	// {
+		// memset(&buf[(instruction_width + 1) * _y], smbl_instruction.smbl, instruction_width);
+		// buf[(instruction_width + 1) * _y] = '\n';
+	// }
+	// buf[(instruction_width + 1) * instruction_height] = '\0';
+// 
+	// char *test = "test";
+	
+
+	// ImageDrawTextEx(smbl_rendering_image, font, test,
+				// (Vector2){g_data.offset_x + smbl_instruction.rect.x0 * g_data.t_w, g_data.offset_y + smbl_instruction.rect.y0 * g_data.t_h},
+				 // g_data.t_w, 0, raylib_color);
+
+
+	
+	// Image instruction_image = GenImageColor(instruction_width * g_data.t_w, instruction_height * g_data.t_h, raylib_color);
+	// // instruction_image = ImageTextEx(font, buf, g_data.font_size, 1, raylib_color);
+	// 
+	// Texture2D instruction_tex = LoadTextureFromImage(instruction_image);
+	// DrawTexture(instruction_tex, g_data.offset_x + smbl_instruction.rect.x0 * g_data.t_w, g_data.offset_y + smbl_instruction.rect.y0 * g_data.t_h, raylib_color);
+	// UnloadTexture(instruction_tex);
+
+	Font font = g_data.g_fonts[font_index(smbl_instruction)];
+	Color raylib_color = tl_color8b_to_Color(smbl_instruction.smbl_col);
+
 	for (uchar_t _y = smbl_instruction.rect.y0; _y <= smbl_instruction.rect.y1; _y++)
+	{
 		for (uchar_t _x = smbl_instruction.rect.x0; _x <= smbl_instruction.rect.x1; _x++)
 		{
-			DrawTextCodepoint(g_data.g_fonts[font_index(smbl_instruction)] , smbl_instruction.smbl,
+			DrawTextCodepoint(font, smbl_instruction.smbl,
 							(Vector2){g_data.offset_x + _x * g_data.t_w, g_data.offset_y + _y * g_data.t_h},
-							g_data.font_size, tl_color8b_to_Color(smbl_instruction.smbl_col));
+							g_data.font_size, raylib_color);
 			draw_calls++;
 		}
+	}
+		
 	return draw_calls;
 }
 
@@ -148,15 +181,15 @@ Pos_t render_instructions(grid_t *grid)
 		if(ins_type(c_instruction))
 		{
 			bg_instruction = (bg_instruction_t *)(&c_instruction);
-			draw_rect(g_data, bg_instruction->rect.x0, bg_instruction->rect.y0,  bg_instruction->rect.x1, bg_instruction->rect.y1, bg_instruction->bg_col);
+			draw_rect(g_data, bg_instruction->rect.x0, bg_instruction->rect.y0,  bg_instruction->rect.x1, bg_instruction->rect.y1, 
+						bg_instruction->bg_col);
 			draw_calls.x++;
 		}
 		else
 		{
 			draw_calls.y += render_smbl_instruction(g_data, *(smbl_instruction_t *)(&c_instruction));
 		}
-	}
-	
+	}	
 	return draw_calls;
 }
 

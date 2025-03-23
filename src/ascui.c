@@ -68,10 +68,13 @@ container_t *ascui_text(bool open, size_type_e s_type, uchar_t size, uint_t text
 	container_t *container = create_container_stub(open, s_type, size, TEXT);
 	container->container_type_data = calloc(1, sizeof(text_data_t));
 	((text_data_t *)container->container_type_data)->style = style;
-	
-	((text_data_t *)container->container_type_data)->text = calloc(text_len, sizeof(char));
-	strcpy(((text_data_t *)container->container_type_data)->text, text);
-	((text_data_t *)container->container_type_data)->text_len = text_len;
+
+	if(text != NULL)
+	{
+		((text_data_t *)container->container_type_data)->text = calloc(text_len, sizeof(char));
+		strcpy(((text_data_t *)container->container_type_data)->text, text);
+		((text_data_t *)container->container_type_data)->text_len = text_len;
+	}
 
 	return container;
 }
@@ -488,6 +491,9 @@ static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t 
 
 		for (uint_t i = 0; i < t_data->text_len; i++)
 		{
+			if (t_data->text[i] == '\0')
+				break;
+				
 			if(t_data->text[i] == INLINE_FONT)
 			{
 				if(inl_font_active)
@@ -527,6 +533,8 @@ static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t 
 				_x = 0;
 				continue; 
 			}
+
+			
 			if(_y >= 0 && !(y0 + max(0, _y) > y1)) // do not render if tiles have been "scrolled" out of view - or if the text overflows
 			{
 				if(inl_color_active)
@@ -636,6 +644,8 @@ static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t 
 			
 			for (uint_t i = 0; i < bt_data->text_len; i++)
 			{
+				if (bt_data->text[i] == '\0')
+					break;
 				if(bt_data->text[i] == INLINE_FONT)
 				{
 					if(inl_font_active)

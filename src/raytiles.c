@@ -173,21 +173,18 @@ Pos_t render_instructions(grid_t *grid)
 	instruction_t *instructions = grid->instructions;
 	instruction_t c_instruction;
 	
-	bg_instruction_t *bg_instruction;
-
 	for (uint_t i = 0; i < grid->instructions_count; i++)
 	{
 		c_instruction = instructions[i];
 		if(ins_type(c_instruction))
 		{
-			bg_instruction = (bg_instruction_t *)(&c_instruction);
-			draw_rect(g_data, bg_instruction->rect.x0, bg_instruction->rect.y0,  bg_instruction->rect.x1, bg_instruction->rect.y1, 
-						bg_instruction->bg_col);
+			draw_rect(g_data, c_instruction.bg.rect.x0, c_instruction.bg.rect.y0,  c_instruction.bg.rect.x1, c_instruction.bg.rect.y1, 
+						c_instruction.bg.bg_col);
 			draw_calls.x++;
 		}
 		else
 		{
-			draw_calls.y += render_smbl_instruction(g_data, *(smbl_instruction_t *)(&c_instruction));
+			draw_calls.y += render_smbl_instruction(g_data, c_instruction.smbl);
 		}
 	}	
 	return draw_calls;

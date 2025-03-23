@@ -25,9 +25,11 @@ void main_ui()
 	container_style_t s_0 = style(0, col8bt(0,0,0), col8bt(5,0,2), col8bt(7,7,3), '=', '|', '+');
 	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
 	top_container = ascui_container(true, PERCENTAGE, 100, VERTICAL, 2,
-		ascui_box(true, PERCENTAGE, 30, HORIZONTAL, s_0, 4, 
-			ascui_text(true, TILES, 3, strlen("Tool Box"), "Tool Box", s_1),
-			ascui_button(true, TILES, 5, strlen("Sea"), "Sea", s_1, NULL, NULL, NULL),
+		ascui_box(true, PERCENTAGE, 30, HORIZONTAL, s_0, 6, 
+			ascui_text(true, TILES, 3, strlen("\b000Tool\b \a700Box\a!"), "\b000Tool\b \a700Box\a!", s_1),
+			ascui_text(true, TILES, 5, strlen("\a700Test\a \b000Test\b \a003\b000Test\b\a"), "\a700Test\a \b000Test\b \a003\b000Test\b\a", s_1),
+			ascui_text(true, TILES, 5, strlen("\b001Test\b Hello"), "\b001Test\b Hello", s_1),
+			ascui_button(true, TILES, 5, strlen("S\a003ea\a"), "S\a003ea\a", s_1, NULL, NULL, NULL),
 			ascui_button(true, TILES, 5, strlen("Grasslands"), "Grasslands", s_1, NULL, NULL, NULL),
 			ascui_button(true, TILES, 5, strlen("Mountains"), "Mountains", s_1, NULL, NULL, NULL)
 		),

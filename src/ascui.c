@@ -9,6 +9,8 @@
 #include "texts.h"
 
 #define get_orientation(container) *(container_orientation_e *)(container->container_type_data)
+#define INLINE_COLOR '\a'
+#define INLINE_FONT '\b'
 
 static container_t *create_container_stub(bool open, size_type_e s_type, uchar_t size, container_type_e c_type)
 {
@@ -279,9 +281,11 @@ static bool check_cursor_hover(cursor_t *cursor, container_t *container, uchar_t
 		
 	if(container->container_type == BOX)	
 	{
-		bool y_match = (cursor->y == y0) || (cursor->y == y1);
-		bool x_match = (cursor->x == x0) || (cursor->x == x1);
-		if(x_match || y_match)
+		bool inside_box = cursor->y >= y0 && cursor->y <= y1 && cursor->x >= x0 && cursor->x <= x1;
+		bool inside_child = cursor->y >= y0 + 1 && cursor->y <= y1 - 1 && cursor->x >= x0 + 1 && cursor->x <= x1 - 1;
+		// bool y_match = (cursor->y == y0) || (cursor->y == y1);
+		// bool x_match = (cursor->x == x0) || (cursor->x == x1);
+		if(inside_box && !inside_child)
 		{
 			cursor->hovered_container = container;
 			return true;
@@ -474,10 +478,45 @@ static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t 
 		int _y = - container->scroll_offset; // = 0 at no scroll
 		uint_t total_text_len = 0;
 
+		color8b_t inl_color = BLACK8B;
+		bool inl_color_active = false;
+
+		uchar_t font = t_data->style.font;
+		bool inl_font_active = false;
+		
 		tl_draw_rect_bg(grid, x0, y0, x1, y1, bg_col);
 
 		for (uint_t i = 0; i < t_data->text_len; i++)
 		{
+			if(t_data->text[i] == INLINE_FONT)
+			{
+				if(inl_font_active)
+				{
+					font = t_data->style.font; // Restore old font
+					inl_font_active = false;
+				}
+				else
+				{
+					inl_font_active = true;
+					font = atoi(&t_data->text[i + 1]);
+					i += 3;
+				}
+				continue;
+			}
+			
+			if (t_data->text[i] == INLINE_COLOR)
+			{
+				if(inl_color_active)
+					inl_color_active = false;
+				else
+				{
+					inl_color_active = true;
+					inl_color = col8bt(t_data->text[i + 1] - 48, t_data->text[i + 2] - 48, t_data->text[i + 3] - 48);
+					i += 3;
+				}
+				continue;
+			}
+			
 			if (x0 + _x > x1)
 				{total_text_len++;  _y++; _x = 0; }
 			
@@ -489,7 +528,12 @@ static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t 
 				continue; 
 			}
 			if(_y >= 0 && !(y0 + max(0, _y) > y1)) // do not render if tiles have been "scrolled" out of view - or if the text overflows
-				tl_plot_smbl(grid, x0 + _x, y0 + _y, t_data->text[i], smbl_col, t_data->style.font);
+			{
+				if(inl_color_active)
+					tl_plot_smbl(grid, x0 + _x, y0 + _y, t_data->text[i], inl_color, font);
+				else
+					tl_plot_smbl(grid, x0 + _x, y0 + _y, t_data->text[i], smbl_col, font);
+			}
 			_x++;
 		}
 			
@@ -538,21 +582,88 @@ static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t 
 		int  horizontal_start = ((int)horizontal_space - (int)bt_data->text_len) / 2;
 
 		tl_draw_rect_bg(grid, x0, y0, x1, y1, bg_col);
+		color8b_t inl_color = BLACK8B;
+		bool inl_color_active = false;
+
+		uchar_t font = bt_data->style.font;
+		bool inl_font_active = false;
 
 		if (horizontal_start >= 0)
 		{
+			uint i_offset = 0;
 			for (uint_t i = 0; i < bt_data->text_len; i++)
 			{
-				tl_plot_smbl(grid, x0 + horizontal_start + i, y0 + vertical_midpoint, bt_data->text[i], smbl_col, bt_data->style.font);
+				if(bt_data->text[i] == INLINE_FONT)
+				{
+					if (inl_font_active)
+					{
+						font = bt_data->style.font; // Restore old font
+						inl_font_active = false;
+					}
+					else
+					{
+						inl_font_active = true;
+						font = atoi(&bt_data->text[i + 1]);
+						i += 3;
+					}
+					continue;
+				}
+				
+				if (bt_data->text[i] == INLINE_COLOR)
+				{
+					if(inl_color_active)
+						inl_color_active = false;
+					else
+					{
+						inl_color_active = true;
+						inl_color = col8bt(bt_data->text[i + 1] - 48, bt_data->text[i + 2] - 48, bt_data->text[i + 3] - 48);
+						i += 3;
+					}
+					continue;
+				}
+				if(inl_color_active)
+					tl_plot_smbl(grid, x0 + horizontal_start + i_offset, y0 + vertical_midpoint, bt_data->text[i], inl_color, font);
+				else
+					tl_plot_smbl(grid, x0 + horizontal_start + i_offset, y0 + vertical_midpoint, bt_data->text[i], smbl_col, font);
+				i_offset++; // only increment if something was drawn
 			}
 		}
 		else
 		{
 			uchar_t _x = 0;
 			uchar_t _y = 0;
+
 			
 			for (uint_t i = 0; i < bt_data->text_len; i++)
 			{
+				if(bt_data->text[i] == INLINE_FONT)
+				{
+					if(inl_font_active)
+					{
+						font = bt_data->style.font; // Restore old font
+						inl_font_active = false;
+					}
+					else
+					{
+						inl_font_active = true;
+						font = atoi(&bt_data->text[i + 1]);
+						i += 3;
+					}
+					continue;
+				}
+				
+				if (bt_data->text[i] == INLINE_COLOR)
+				{
+					if(inl_color_active)
+						inl_color_active = false;
+					else
+					{
+						inl_color_active = true;
+						inl_color = col8bt(bt_data->text[i + 1] - 48, bt_data->text[i + 2] - 48, bt_data->text[i + 3] - 48);
+						i += 3;
+					}
+					continue;
+				}
 			
 				if (x0 + _x > x1)
 					{_y++; _x = 0; }
@@ -567,7 +678,10 @@ static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t 
 					continue; 
 				}
 				
-				tl_plot_smbl(grid, x0 + _x, y0 + _y, bt_data->text[i], smbl_col, bt_data->style.font);
+				if(inl_color_active)
+					tl_plot_smbl(grid, x0 + _x, y0 + _y, bt_data->text[i], inl_color, font);
+				else
+					tl_plot_smbl(grid, x0 + _x, y0 + _y, bt_data->text[i], smbl_col, font);
 				_x++;
 			}
 		}

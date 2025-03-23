@@ -49,12 +49,11 @@ typedef struct
 #define SMBL 0
 #define BG 1
 
-typedef struct
+typedef union
 {
 	char type_bit;
-	char padding;
-	color8b_t color;
-	rect_t rect;
+	smbl_instruction_t smbl;
+	bg_instruction_t bg;
 }instruction_t;		// Generic type covering smbl and bg instruction types
 
 typedef struct

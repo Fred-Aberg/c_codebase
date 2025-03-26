@@ -12,7 +12,7 @@
 #define INLINE_COLOR '\a'
 #define INLINE_FONT '\b'
 
-static container_t *create_container_stub(bool open, size_type_e s_type, uchar_t size, container_type_e c_type)
+static container_t *create_container_stub(bool open, size_type_e s_type, uint8_t size, container_type_e c_type)
 {
 	container_t	*container = calloc(1, sizeof(container_t));
 	container->open = open;
@@ -24,7 +24,7 @@ static container_t *create_container_stub(bool open, size_type_e s_type, uchar_t
 	return container;
 }
 
-container_t *ascui_container(bool open, size_type_e s_type, uchar_t size, container_orientation_e orientation, uint_t n_subcontainers, ...)
+container_t *ascui_container(bool open, size_type_e s_type, uint8_t size, container_orientation_e orientation, uint16_t n_subcontainers, ...)
 {
 	container_t *container = create_container_stub(open, s_type, size, CONTAINER);
 	container->container_type_data = calloc(1, sizeof(container_data_t));
@@ -34,7 +34,7 @@ container_t *ascui_container(bool open, size_type_e s_type, uchar_t size, contai
 
 	va_list subcontainers;
 	va_start(subcontainers, n_subcontainers);
-	for (uint_t i = 0; i < n_subcontainers; i++) 
+	for (uint16_t i = 0; i < n_subcontainers; i++) 
 	{
         ((container_data_t *)container->container_type_data)->subcontainers[i] = va_arg(subcontainers, container_t *);
 	}
@@ -43,7 +43,7 @@ container_t *ascui_container(bool open, size_type_e s_type, uchar_t size, contai
 	return container;
 }
 
-container_t *ascui_box(bool open, size_type_e s_type, uchar_t size, container_orientation_e orientation, container_style_t style, uint_t n_subcontainers, ...)
+container_t *ascui_box(bool open, size_type_e s_type, uint8_t size, container_orientation_e orientation, container_style_t style, uint16_t n_subcontainers, ...)
 {
 	container_t *container = create_container_stub(open, s_type, size, BOX);
 	container->container_type_data = calloc(1, sizeof(box_data_t));
@@ -54,7 +54,7 @@ container_t *ascui_box(bool open, size_type_e s_type, uchar_t size, container_or
 
 	va_list subcontainers;
 	va_start(subcontainers, n_subcontainers);
-	for (uint_t i = 0; i < n_subcontainers; i++) 
+	for (uint16_t i = 0; i < n_subcontainers; i++) 
 	{
         ((box_data_t *)container->container_type_data)->subcontainers[i] = va_arg(subcontainers, container_t *);
 	}
@@ -63,7 +63,7 @@ container_t *ascui_box(bool open, size_type_e s_type, uchar_t size, container_or
 	return container;
 }
 
-container_t *ascui_text(bool open, size_type_e s_type, uchar_t size, uint_t text_len, char *text, container_style_t style)
+container_t *ascui_text(bool open, size_type_e s_type, uint8_t size, uint16_t text_len, char *text, container_style_t style)
 {
 	container_t *container = create_container_stub(open, s_type, size, TEXT);
 	container->container_type_data = calloc(1, sizeof(text_data_t));
@@ -79,7 +79,7 @@ container_t *ascui_text(bool open, size_type_e s_type, uchar_t size, uint_t text
 	return container;
 }
 
-container_t *ascui_subgrid(bool open, size_type_e s_type, uchar_t size, grid_t *subgrid)
+container_t *ascui_subgrid(bool open, size_type_e s_type, uint8_t size, grid_t *subgrid)
 {
 	container_t *container = create_container_stub(open, s_type, size, SUBGRID);
 	container->container_type_data = calloc(1, sizeof(subgrid_data_t));
@@ -88,7 +88,7 @@ container_t *ascui_subgrid(bool open, size_type_e s_type, uchar_t size, grid_t *
 	return container;
 }
 
-container_t *ascui_button(bool open, size_type_e s_type, uchar_t size, uint_t text_len, char *text, container_style_t style, 
+container_t *ascui_button(bool open, size_type_e s_type, uint8_t size, uint16_t text_len, char *text, container_style_t style, 
 						  UI_side_effect_func side_effect_func, void *domain, void *function_data)
  {
  	container_t *container = create_container_stub(open, s_type, size, BUTTON);
@@ -132,12 +132,12 @@ button_data_t *ascui_get_button_data(container_t *container)
 	return (button_data_t *)container->container_type_data;
 }
 
-container_t *ascui_get_nth_subcontainer(container_t *container, uint_t n)
+container_t *ascui_get_nth_subcontainer(container_t *container, uint16_t n)
 {
 	 container_type_e type = container->container_type;
 
 	container_t **subcontainers;
-	uint_t n_subcontainers;
+	uint16_t n_subcontainers;
 	if(type == CONTAINER)
 	{
 		subcontainers = ascui_get_container_data(container)->subcontainers;
@@ -157,18 +157,18 @@ container_t *ascui_get_nth_subcontainer(container_t *container, uint_t n)
 }
 
 // ?
-void ascui_set_nth_subcontainer(container_t *container, uint_t n, container_t *subcontainer)
+void ascui_set_nth_subcontainer(container_t *container, uint16_t n, container_t *subcontainer)
 {
 	container_t **subcontainer_address = &ascui_get_container_data(container)->subcontainers[n];
 	*subcontainer_address = subcontainer;
 }
 
 
-static void _print_ui(container_t *container, uint_t indentation, bool last_child)
+static void _print_ui(container_t *container, uint16_t indentation, bool last_child)
 {
 	int line_len = 0;
 	putc('\n', stdout);
-	for (uint_t i = 0; i < indentation; i++)
+	for (uint16_t i = 0; i < indentation; i++)
 	{
 		if (i == indentation - 1)
 			if(last_child)
@@ -207,7 +207,7 @@ static void _print_ui(container_t *container, uint_t indentation, bool last_chil
 			break;
 	}
 
-	uint_t n_subcontainers;
+	uint16_t n_subcontainers;
 	container_t **subcontainers;
 	
 	if (container->container_type == CONTAINER)
@@ -224,7 +224,7 @@ static void _print_ui(container_t *container, uint_t indentation, bool last_chil
 	}
 	else return;
 	
-	for (uint_t i = 0; i < n_subcontainers; i++)
+	for (uint16_t i = 0; i < n_subcontainers; i++)
 		_print_ui(subcontainers[i], indentation + 1, (i == n_subcontainers - 1));
 }
 
@@ -239,7 +239,7 @@ void ascui_destroy(container_t *container)
 	container_type_e type = container->container_type;
 
 	container_t **subcontainers;
-	uint_t n_subcontainers = 0;
+	uint16_t n_subcontainers = 0;
 	switch (type)
 	{
 		case CONTAINER:
@@ -247,7 +247,7 @@ void ascui_destroy(container_t *container)
 		n_subcontainers = ascui_get_container_data(container)->n_subcontainers;
 		if(n_subcontainers != 0)
 		{
-			for (uint_t i = 0; i < n_subcontainers; i++)
+			for (uint16_t i = 0; i < n_subcontainers; i++)
 			{
 				ascui_destroy(subcontainers[i]);
 			}
@@ -258,7 +258,7 @@ void ascui_destroy(container_t *container)
 		n_subcontainers = ascui_get_box_data(container)->n_subcontainers;
 		if(n_subcontainers != 0)
 		{
-			for (uint_t i = 0; i < n_subcontainers; i++)
+			for (uint16_t i = 0; i < n_subcontainers; i++)
 			{
 				ascui_destroy(subcontainers[i]);
 			}
@@ -277,7 +277,7 @@ void ascui_destroy(container_t *container)
 	free(container);
 }
 
-static bool check_cursor_hover(cursor_t *cursor, container_t *container, uchar_t x0, int y0, uchar_t x1, int y1)
+static bool check_cursor_hover(cursor_t *cursor, container_t *container, uint8_t x0, int y0, uint8_t x1, int y1)
 {
 	if(container->container_type == CONTAINER)
 		return false;
@@ -305,7 +305,7 @@ static bool check_cursor_hover(cursor_t *cursor, container_t *container, uchar_t
 	return false;
 }
 
-static void draw_box(grid_t *grid, container_style_t style, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, bool invert_cols)
+static void draw_box(grid_t *grid, container_style_t style, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, bool invert_cols)
 {
 	if (invert_cols)
 	{
@@ -325,7 +325,7 @@ static void draw_box(grid_t *grid, container_style_t style, uchar_t x0, uchar_t 
 	tl_plot_smbl_w_bg(grid, x1, y1, style.corner_symbol, style.char_col, style.border_col, style.font);
 }
 
-static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t x0, uint_t y0, uint_t x1, uint_t y1,
+static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
 								 container_orientation_e parent_orientation, cursor_t *cursor)
 {
 	if (!container->open)
@@ -340,16 +340,16 @@ static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t 
 	bool selected = cursor->selected_container == container;
 	float percentage;
 
-	uchar_t sub_x1;
-	uchar_t sub_y1;
+	uint8_t sub_x1;
+	uint8_t sub_y1;
 
-	uint_t n_subcontainers;
+	uint16_t n_subcontainers;
 	container_t *c_subcontainer;
 	container_type_e c_type = container->container_type;
 	// bool percentage_split = true;
 
-	uint_t tiles_drawn = 0;
-	uint_t max_scroll = 0;
+	uint16_t tiles_drawn = 0;
+	uint16_t max_scroll = 0;
 	 	
 	if (c_type == CONTAINER || c_type == BOX)
 	{
@@ -380,7 +380,7 @@ static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t 
 		// Account for box edges when delegating space for subcontainers
 		if (c_type == BOX) {x0++; y0++; x1--; y1--;}
 
-		for (uint_t i = container->scroll_offset; i < n_subcontainers; i++)
+		for (uint16_t i = container->scroll_offset; i < n_subcontainers; i++)
 		{
 			c_subcontainer = subcontainers[i];
 			// Edge case: Last subcontainer
@@ -477,19 +477,19 @@ static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t 
 			smbl_col = t_data->style.char_col;
 		}
 		
-		uint_t _x = 0;
+		uint16_t _x = 0;
 		int _y = - container->scroll_offset; // = 0 at no scroll
-		uint_t total_text_len = 0;
+		uint16_t total_text_len = 0;
 
 		color8b_t inl_color = BLACK8B;
 		bool inl_color_active = false;
 
-		uchar_t font = t_data->style.font;
+		uint8_t font = t_data->style.font;
 		bool inl_font_active = false;
 		
 		tl_draw_rect_bg(grid, x0, y0, x1, y1, bg_col);
 
-		for (uint_t i = 0; i < t_data->text_len; i++)
+		for (uint16_t i = 0; i < t_data->text_len; i++)
 		{
 			if (t_data->text[i] == '\0')
 				break;
@@ -545,7 +545,7 @@ static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t 
 			_x++;
 		}
 			
-		uint_t max_scroll = max((int)total_text_len - (int)(y1-y0), 0);
+		uint16_t max_scroll = max((int)total_text_len - (int)(y1-y0), 0);
 		container->scroll_offset = umin(container->scroll_offset, max_scroll);
 
 		if(hovered && cursor->scroll != 0)
@@ -584,22 +584,22 @@ static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t 
 		}
 
 
-		uchar_t horizontal_space = x1 - x0 + 1;
-		uchar_t vertical_space = y1 - y0 + 1;
-		uchar_t vertical_midpoint = vertical_space / 2;
+		uint8_t horizontal_space = x1 - x0 + 1;
+		uint8_t vertical_space = y1 - y0 + 1;
+		uint8_t vertical_midpoint = vertical_space / 2;
 		int  horizontal_start = ((int)horizontal_space - (int)bt_data->text_len) / 2;
 
 		tl_draw_rect_bg(grid, x0, y0, x1, y1, bg_col);
 		color8b_t inl_color = BLACK8B;
 		bool inl_color_active = false;
 
-		uchar_t font = bt_data->style.font;
+		uint8_t font = bt_data->style.font;
 		bool inl_font_active = false;
 
 		if (horizontal_start >= 0)
 		{
 			uint i_offset = 0;
-			for (uint_t i = 0; i < bt_data->text_len; i++)
+			for (uint16_t i = 0; i < bt_data->text_len; i++)
 			{
 				if(bt_data->text[i] == INLINE_FONT)
 				{
@@ -638,11 +638,11 @@ static uint_t ascui_draw_container(grid_t *grid, container_t *container, uint_t 
 		}
 		else
 		{
-			uchar_t _x = 0;
-			uchar_t _y = 0;
+			uint8_t _x = 0;
+			uint8_t _y = 0;
 
 			
-			for (uint_t i = 0; i < bt_data->text_len; i++)
+			for (uint16_t i = 0; i < bt_data->text_len; i++)
 			{
 				if (bt_data->text[i] == '\0')
 					break;
@@ -704,7 +704,7 @@ void ascui_draw_ui(grid_t *grid, container_t *top_container, cursor_t *cursor)
 {
 	cursor->hovered_container = NULL; // Reset hovered container
 
-	Pos_t grid_size = tl_grid_get_dimensions(grid);
+	pos16_t grid_size = tl_grid_get_dimensions(grid);
 	container_data_t *c_data = ascui_get_container_data(top_container);
 	ascui_draw_container(grid, top_container, 0, 0, grid_size.x - 1, grid_size.y - 1, c_data->orientation, cursor);
 }

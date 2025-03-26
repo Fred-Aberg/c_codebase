@@ -11,13 +11,13 @@
 
 typedef struct 
 {
-	char font;
+	uint8_t font;
     color8b_t bg_col;
     color8b_t border_col;
     color8b_t char_col;
-    uchar_t border_h_symbol;
-    uchar_t border_v_symbol;
-    uchar_t corner_symbol;
+    uint8_t border_h_symbol;
+    uint8_t border_v_symbol;
+    uint8_t corner_symbol;
 }container_style_t;
 
 typedef enum
@@ -47,8 +47,8 @@ typedef struct
 {
 	bool open;
 	container_type_e container_type;
-	uint_t scroll_offset;
-	uchar_t size;
+	uint16_t scroll_offset;
+	uint8_t size;
 	size_type_e size_type;
 	void *container_type_data;
 }container_t;
@@ -56,14 +56,14 @@ typedef struct
 typedef struct
 {
 	container_orientation_e orientation;
-	uint_t n_subcontainers;
+	uint16_t n_subcontainers;
 	container_t **subcontainers;
 }container_data_t;
 
 typedef struct
 {
 	container_orientation_e orientation;
-	uint_t n_subcontainers;
+	uint16_t n_subcontainers;
 	container_t **subcontainers;
 	container_style_t style;
 }box_data_t;
@@ -71,7 +71,7 @@ typedef struct
 typedef struct
 {
 	container_style_t style;
-	uint_t text_len;
+	uint16_t text_len;
 	char *text;
 }text_data_t;
 
@@ -103,8 +103,8 @@ typedef struct
     bool right_button_pressed; 
     bool left_button_pressed; 
     bool middle_button_pressed; 
-    uchar_t x;
-    uchar_t y;
+    uint8_t x;
+    uint8_t y;
     container_t *selected_container;
     container_t *hovered_container;
     float scroll;
@@ -114,7 +114,7 @@ typedef void (*UI_side_effect_func)(void *domain, void *function_data, cursor_t 
 
 typedef struct
 {
-	uint_t text_len;
+	uint16_t text_len;
 	char *text;
 	UI_side_effect_func side_effect_func;
 	void *domain;
@@ -133,20 +133,20 @@ typedef struct
 typedef struct
 {
 	container_tag_t *tags;
-	uint_t capacity;
-	uint_t count;
+	uint16_t capacity;
+	uint16_t count;
 }container_tag_list_t;
 
 /////
-container_t *ascui_container(bool open, size_type_e s_type, uchar_t size, container_orientation_e orientation, uint_t n_subcontainers, ...);
+container_t *ascui_container(bool open, size_type_e s_type, uint8_t size, container_orientation_e orientation, uint16_t n_subcontainers, ...);
 
-container_t *ascui_box(bool open, size_type_e s_type, uchar_t size, container_orientation_e orientation, container_style_t style, uint_t n_subcontainers, ...);
+container_t *ascui_box(bool open, size_type_e s_type, uint8_t size, container_orientation_e orientation, container_style_t style, uint16_t n_subcontainers, ...);
 
-container_t *ascui_text(bool open, size_type_e s_type, uchar_t size, uint_t text_len, char *text, container_style_t style);
+container_t *ascui_text(bool open, size_type_e s_type, uint8_t size, uint16_t text_len, char *text, container_style_t style);
 
-container_t *ascui_subgrid(bool open, size_type_e s_type, uchar_t size, grid_t *subgrid);
+container_t *ascui_subgrid(bool open, size_type_e s_type, uint8_t size, grid_t *subgrid);
 
-container_t *ascui_button(bool open, size_type_e s_type, uchar_t size, uint_t text_len, char *text, container_style_t style, 
+container_t *ascui_button(bool open, size_type_e s_type, uint8_t size, uint16_t text_len, char *text, container_style_t style, 
 						  UI_side_effect_func side_effect_func, void *domain, void *function_data);
 ////
 
@@ -162,9 +162,9 @@ subgrid_data_t *ascui_get_subgrid_data(container_t *container);
 
 button_data_t *ascui_get_button_data(container_t *container);
 
-void ascui_set_nth_subcontainer(container_t *container, uint_t n, container_t *subcontainer);
+void ascui_set_nth_subcontainer(container_t *container, uint16_t n, container_t *subcontainer);
 
-container_t *ascui_get_nth_subcontainer(container_t *container, uint_t n);
+container_t *ascui_get_nth_subcontainer(container_t *container, uint16_t n);
 
 void ascui_print_ui(container_t *container);
 

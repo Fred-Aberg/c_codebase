@@ -53,9 +53,9 @@ int main(){
 	long tick = 0;
 
 
-   	int screensize_x = 0;
-	int screensize_y = 0;
-	uint_t tile_width = 0;
+   	int16_t screensize_x = 0;
+	int16_t screensize_y = 0;
+	uint16_t tile_width = 0;
 	char input[50];
  
    	printf("Screen width:\n");
@@ -114,20 +114,20 @@ int main(){
     	tick++;
 		frame_time = -GetTime();
     
-		Pos_t mouse_scr_pos = pos(GetMouseX(), GetMouseY());
+		pos16_t mouse_scr_pos = pos16(GetMouseX(), GetMouseY());
 
         BeginDrawing();
         ClearBackground(BLACK);
 
 		if(IsKeyDown(45))
 		{
-			uint_t new_tile_size = main_grid->tile_p_w + 1;
+			uint16_t new_tile_size = main_grid->tile_p_w + 1;
 			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, new_tile_size);
 			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}
 		else if(IsKeyDown(47))
 		{
-			uint_t new_tile_size = main_grid->tile_p_w - 1;
+			uint16_t new_tile_size = main_grid->tile_p_w - 1;
 			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, new_tile_size);
 			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
 		}
@@ -143,7 +143,7 @@ int main(){
 		}
 		
 		// Main grid
-		Pos_t mouse_grid_pos = tl_screen_to_grid_coords(main_grid, mouse_scr_pos);
+		pos16_t mouse_grid_pos = tl_screen_to_grid_coords(main_grid, mouse_scr_pos);
 		cursor.x = mouse_grid_pos.x;
 		cursor.y = mouse_grid_pos.y;
 		cursor.right_button_pressed = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
@@ -151,7 +151,7 @@ int main(){
 		cursor.scroll = GetMouseWheelMove();
 
 
-		// Pos_t main_grid_size = tl_grid_get_dimensions(main_grid);
+		// pos16_t main_grid_size = tl_grid_get_dimensions(main_grid);
 		
 		ascui_drawing_time = -GetTime();
 		ascui_draw_ui(main_grid, top_container, &cursor);
@@ -177,7 +177,7 @@ int main(){
 		}
 		// printf("\nhov=[%p] sel[%p]", cursor.hovered_container, cursor.selected_container);
 
-		Pos_t subgrid_size = tl_grid_get_dimensions(subgrid);
+		pos16_t subgrid_size = tl_grid_get_dimensions(subgrid);
 		tl_draw_rect_smbl_w_bg(subgrid, 0, 0, subgrid_size.x - 1, subgrid_size.y - 1, '.', col8bt(5, 1, 2), col8bt(3, 0, 1), 1);
 
 		if(cursor.hovered_container == subgrid_container)
@@ -189,8 +189,8 @@ int main(){
 			tl_plot_smbl_w_bg(main_grid, mouse_grid_pos.x, mouse_grid_pos.y, 'A', WHITE8B, BLACK8B, 0);
 
 		tl_rendering_time = -GetTime();
-		Pos_t main_grid_dcalls = tl_render_grid(main_grid);
-		Pos_t sub_grid_dcalls = tl_render_grid(subgrid);
+		pos16_t main_grid_dcalls = tl_render_grid(main_grid);
+		pos16_t sub_grid_dcalls = tl_render_grid(subgrid);
 		tl_rendering_time += GetTime();
 
 		frame_time += GetTime();

@@ -5,7 +5,6 @@
 #include "assert.h"
 #include "string.h"
 
-#define MIN(a, b) (a < b)? a : b
 #define grid_width(grid) ((grid->on_scr_size_x) / grid->tile_p_w)		// max 255
 #define tile_pixel_height(grid) (int)(grid->tile_h_to_w_ratio * (float)grid->tile_p_w)
 #define grid_height(grid) ((grid->on_scr_size_y) / tile_pixel_height(grid))		// max 255
@@ -16,8 +15,8 @@
 
 typedef struct
 {
-	uchar_t g_w;
-	uchar_t g_h;
+	uint8_t g_w;
+	uint8_t g_h;
 	int t_w;
 	int t_h;
 	int offset_x;
@@ -46,8 +45,8 @@ color8b_t col8bt(char r, char g, char b)
 	return ( r<<5 ) + ( g<<2 ) + b;
 }
 								   //0  1   2   3   4    5    6    7
-const uchar_t convert_3b_to_8b[8] = {0, 32, 64, 96, 128, 160, 192, 255};
-const uchar_t convert_2b_to_8b[4] = {0, 	64, 	128, 	 	   255};
+const uint8_t convert_3b_to_8b[8] = {0, 32, 64, 96, 128, 160, 192, 255};
+const uint8_t convert_2b_to_8b[4] = {0, 	64, 	128, 	 	   255};
 								   //0      1       2              3
 
 Color tl_color8b_to_Color(color8b_t col)
@@ -61,8 +60,8 @@ color8b_t tl_Color_to_color8b(Color col)
 	return ( (char)(((float)col.r/255.0f) * 7.0f)<<5 ) + ( (char)(((float)col.g/255.0f) * 7.0f)<<2 ) + ( (char)(((float)col.b/255.0f) * 3.0f) );
 }
 
-grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_size_y, uint_t tile_p_w, float tile_h_to_w_ratio, 
-					Font *fonts, uint_t starting_instruction_capacity)
+grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_size_y, uint16_t tile_p_w, float tile_h_to_w_ratio, 
+					Font *fonts, uint16_t starting_instruction_capacity)
 {
     grid_t *grid = calloc(1, sizeof(grid_t));
 
@@ -88,9 +87,9 @@ grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_s
     return grid;
 }
 
-Pos_t tl_grid_get_dimensions(grid_t *grid)
+pos16_t tl_grid_get_dimensions(grid_t *grid)
 {
-    return (Pos_t){.x = grid_width(grid), .y = grid_height(grid)};
+    return (pos16_t){.x = grid_width(grid), .y = grid_height(grid)};
 }
 
 void tl_deinit_grid(grid_t *grid)
@@ -99,7 +98,7 @@ void tl_deinit_grid(grid_t *grid)
     free(grid);
 }
 
-void draw_rect(grid_rendering_data_t g_data, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, color8b_t bg_col)
+void draw_rect(grid_rendering_data_t g_data, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, color8b_t bg_col)
 {
 	DrawRectangle(g_data.offset_x + x0 * g_data.t_w, g_data.offset_y + y0 * g_data.t_h,
 				  g_data.t_w * (x1 - x0 + 1), g_data.t_h * (y1 - y0 + 1), tl_color8b_to_Color(bg_col));
@@ -108,14 +107,14 @@ void draw_rect(grid_rendering_data_t g_data, uchar_t x0, uchar_t y0, uchar_t x1,
 #define ins_type(instruction) (instruction.type_bit & 1)
 #define font_index(smbl_instruction) (int)((smbl_instruction.type_and_font_bits & 254)>>1)
 
-uint_t render_smbl_instruction(grid_rendering_data_t g_data, smbl_instruction_t smbl_instruction)
+uint16_t render_smbl_instruction(grid_rendering_data_t g_data, smbl_instruction_t smbl_instruction)
 {
-	uint_t draw_calls = 0;
-	// uint_t instruction_width = smbl_instruction.rect.x1 - smbl_instruction.rect.x0 + 1;
-	// uint_t instruction_height = smbl_instruction.rect.y1 - smbl_instruction.rect.y0 + 1;
+	uint16_t draw_calls = 0;
+	// uint16_t instruction_width = smbl_instruction.rect.x1 - smbl_instruction.rect.x0 + 1;
+	// uint16_t instruction_height = smbl_instruction.rect.y1 - smbl_instruction.rect.y0 + 1;
 	// 
 	// char buf[(instruction_width + 1) * instruction_height + 1];
-	// for (uchar_t _y = 0; _y < instruction_height; _y++)
+	// for (uint8_t _y = 0; _y < instruction_height; _y++)
 	// {
 		// memset(&buf[(instruction_width + 1) * _y], smbl_instruction.smbl, instruction_width);
 		// buf[(instruction_width + 1) * _y] = '\n';
@@ -141,9 +140,9 @@ uint_t render_smbl_instruction(grid_rendering_data_t g_data, smbl_instruction_t 
 	Font font = g_data.g_fonts[font_index(smbl_instruction)];
 	Color raylib_color = tl_color8b_to_Color(smbl_instruction.smbl_col);
 
-	for (uchar_t _y = smbl_instruction.rect.y0; _y <= smbl_instruction.rect.y1; _y++)
+	for (uint8_t _y = smbl_instruction.rect.y0; _y <= smbl_instruction.rect.y1; _y++)
 	{
-		for (uchar_t _x = smbl_instruction.rect.x0; _x <= smbl_instruction.rect.x1; _x++)
+		for (uint8_t _x = smbl_instruction.rect.x0; _x <= smbl_instruction.rect.x1; _x++)
 		{
 			DrawTextCodepoint(font, smbl_instruction.smbl,
 							(Vector2){g_data.offset_x + _x * g_data.t_w, g_data.offset_y + _y * g_data.t_h},
@@ -155,9 +154,9 @@ uint_t render_smbl_instruction(grid_rendering_data_t g_data, smbl_instruction_t 
 	return draw_calls;
 }
 
-Pos_t render_instructions(grid_t *grid)
+pos16_t render_instructions(grid_t *grid)
 {
-	Pos_t draw_calls = pos(0,0);
+	pos16_t draw_calls = pos16(0,0);
 	
 	grid_rendering_data_t g_data =
 	{
@@ -173,7 +172,7 @@ Pos_t render_instructions(grid_t *grid)
 	instruction_t *instructions = grid->instructions;
 	instruction_t c_instruction;
 	
-	for (uint_t i = 0; i < grid->instructions_count; i++)
+	for (uint16_t i = 0; i < grid->instructions_count; i++)
 	{
 		c_instruction = instructions[i];
 		if(ins_type(c_instruction))
@@ -191,10 +190,10 @@ Pos_t render_instructions(grid_t *grid)
 }
 
 
-Pos_t tl_render_grid(grid_t *grid)
+pos16_t tl_render_grid(grid_t *grid)
 {
-	// Pos_t dcs = pos(render_background(grid), render_symbols(grid));
-	Pos_t dcs = render_instructions(grid);
+	// pos16_t dcs = pos(render_background(grid), render_symbols(grid));
+	pos16_t dcs = render_instructions(grid);
 	grid->instructions_count = 0;
     return dcs;
 }
@@ -219,7 +218,7 @@ void tl_set_tile_pw(grid_t *grid, int new_tile_pw)
 }
 
 //new_tile_width = 0 -> minimum will be calculated
-void tl_resize_grid(grid_t *grid, int new_offset_x, int new_offset_y, int new_scr_size_x, int new_scr_size_y, uint_t new_tile_width)
+void tl_resize_grid(grid_t *grid, int new_offset_x, int new_offset_y, int new_scr_size_x, int new_scr_size_y, uint16_t new_tile_width)
 {
     grid->offset_x = new_offset_x;
     grid->offset_y = new_offset_y;
@@ -229,7 +228,7 @@ void tl_resize_grid(grid_t *grid, int new_offset_x, int new_offset_y, int new_sc
 	sanitize_tile_p_w(grid);
 }
 
-void tl_fit_subgrid(grid_t *top_grid, grid_t *sub_grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1)
+void tl_fit_subgrid(grid_t *top_grid, grid_t *sub_grid, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1)
 {
 	int new_offset_x = x0 * top_grid->tile_p_w + top_grid->offset_x;
 	int new_offset_y = y0 * tile_pixel_height(top_grid) + top_grid->offset_y;
@@ -252,7 +251,7 @@ void check_realloc(grid_t *grid)
 	}
 }
 
-bg_instruction_t *add_bg_instruction(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, color8b_t bg_col)
+bg_instruction_t *add_bg_instruction(grid_t *grid, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, color8b_t bg_col)
 {
 	check_realloc(grid);
 	bg_instruction_t new_bg_instruction = (bg_instruction_t){BG, 0, bg_col, r(x0, y0, x1, y1)};
@@ -266,7 +265,7 @@ bg_instruction_t *add_bg_instruction(grid_t *grid, uchar_t x0, uchar_t y0, uchar
 	return bg_loc;
 }
 
-smbl_instruction_t *add_smbl_instruction(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, char font, uchar_t smbl, color8b_t smbl_col)
+smbl_instruction_t *add_smbl_instruction(grid_t *grid, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char font, uint8_t smbl, color8b_t smbl_col)
 {
 	check_realloc(grid);
 	char type_and_font_bits = (char)SMBL | (font << 1);
@@ -285,18 +284,18 @@ smbl_instruction_t *add_smbl_instruction(grid_t *grid, uchar_t x0, uchar_t y0, u
 
 /// Plotting functions
 
-smbl_instruction_t *tl_plot_smbl(grid_t *grid, uchar_t x, uchar_t y, uchar_t symbol, color8b_t char_col, char font)
+smbl_instruction_t *tl_plot_smbl(grid_t *grid, uint8_t x, uint8_t y, uint8_t symbol, color8b_t char_col, char font)
 {
 	return add_smbl_instruction(grid,  x,  y,  x,  y, font, symbol, char_col);
 }
 
-bg_instruction_t *tl_plot_bg(grid_t *grid, uchar_t x, uchar_t y, color8b_t bg_col)
+bg_instruction_t *tl_plot_bg(grid_t *grid, uint8_t x, uint8_t y, color8b_t bg_col)
 {
 	return add_bg_instruction(grid,  x,  y,  x,  y, bg_col);
 }
 
 
-void tl_plot_smbl_w_bg(grid_t *grid, uchar_t x, uchar_t y, uchar_t symbol, color8b_t char_col, color8b_t bg_col, char font)
+void tl_plot_smbl_w_bg(grid_t *grid, uint8_t x, uint8_t y, uint8_t symbol, color8b_t char_col, color8b_t bg_col, char font)
 {
 	add_bg_instruction(grid,  x,  y,  x,  y, bg_col);
 	add_smbl_instruction(grid,  x,  y,  x,  y, font, symbol, char_col);
@@ -304,39 +303,39 @@ void tl_plot_smbl_w_bg(grid_t *grid, uchar_t x, uchar_t y, uchar_t symbol, color
 
 /// Drawing functions
 
-smbl_instruction_t *tl_draw_rect_smbl(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, char symbol, color8b_t char_col, char font)
+smbl_instruction_t *tl_draw_rect_smbl(grid_t *grid, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char symbol, color8b_t char_col, char font)
 {
 	return add_smbl_instruction(grid,  x0,  y0,  x1,  y1, font, symbol, char_col);
 }
 
-bg_instruction_t *tl_draw_rect_bg(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, color8b_t bg_col)
+bg_instruction_t *tl_draw_rect_bg(grid_t *grid, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, color8b_t bg_col)
 {
 	return add_bg_instruction(grid,  x0,  y0,  x1,  y1, bg_col);
 }
-void tl_draw_rect_smbl_w_bg(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, char symbol, color8b_t char_col, color8b_t bg_col, char font)
+void tl_draw_rect_smbl_w_bg(grid_t *grid, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, char symbol, color8b_t char_col, color8b_t bg_col, char font)
 {
 	add_bg_instruction(grid,  x0,  y0,  x1,  y1, bg_col);
 	add_smbl_instruction(grid,  x0,  y0,  x1,  y1, font, symbol, char_col);
 }
 
 // NOTE: Non-cardinal lines will use plot -> less efficient -> returns NULL instead of an instruction
-void tl_draw_line_non_orthogonal(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, uchar_t symbol, uchar_t char_col, color8b_t bg_col, char font, char scenario);
+void tl_draw_line_non_orthogonal(grid_t *grid, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t symbol, uint8_t char_col, color8b_t bg_col, char font, char scenario);
 
-smbl_instruction_t *tl_draw_line_smbl(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, uchar_t symbol, color8b_t char_col, char font)
+smbl_instruction_t *tl_draw_line_smbl(grid_t *grid, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t symbol, color8b_t char_col, char font)
 {
 	if (!(x0 == x1 || y0 == y1)) // Non-cardinal
 		tl_draw_line_non_orthogonal(grid, x0, y0, x1, y1, symbol, char_col, 0, font, 3);
 	return add_smbl_instruction(grid,  x0,  y0,  x1,  y1, font, symbol, char_col);
 }
 
-bg_instruction_t *tl_draw_line_bg(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, color8b_t bg_col)
+bg_instruction_t *tl_draw_line_bg(grid_t *grid, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, color8b_t bg_col)
 {
 	if (!(x0 == x1 || y0 == y1)) // Non-cardinal
 		tl_draw_line_non_orthogonal(grid, x0, y0, x1, y1, 0, 0, bg_col, 0, 1);
 	return add_bg_instruction(grid,  x0,  y0,  x1,  y1, bg_col);
 }
 
-void tl_draw_line_smbl_w_bg(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, uchar_t symbol, color8b_t char_col, color8b_t bg_col, char font)
+void tl_draw_line_smbl_w_bg(grid_t *grid, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t symbol, color8b_t char_col, color8b_t bg_col, char font)
 {
 	if (!(x0 == x1 || y0 == y1)) // Non-cardinal
 		tl_draw_line_non_orthogonal(grid, x0, y0, x1, y1, symbol, char_col, bg_col, font, 0);
@@ -344,7 +343,7 @@ void tl_draw_line_smbl_w_bg(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uc
 	add_smbl_instruction(grid,  x0,  y0,  x1,  y1, font, symbol, char_col);
 }
 
-void tl_draw_line_non_orthogonal(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x1, uchar_t y1, uchar_t symbol, uchar_t char_col, color8b_t bg_col, char font, char scenario)
+void tl_draw_line_non_orthogonal(grid_t *grid, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t symbol, uint8_t char_col, color8b_t bg_col, char font, char scenario)
 {
     // https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
     int dx = abs(x1 - x0);			// Don't believe the linter's lies, the abs() are needed!
@@ -384,12 +383,12 @@ void tl_draw_line_non_orthogonal(grid_t *grid, uchar_t x0, uchar_t y0, uchar_t x
     }
 }
 
-Pos_t tl_screen_to_grid_coords(grid_t *grid, Pos_t xy)
+pos16_t tl_screen_to_grid_coords(grid_t *grid, pos16_t xy)
 {
 	xy.x = uclamp(grid->offset_x, xy.x, grid->offset_x + grid->on_scr_size_x);
 	xy.y = uclamp(grid->offset_y, xy.y, grid->offset_y + grid->on_scr_size_y);
 
-    return pos((xy.x - grid->offset_x) / grid->tile_p_w, (xy.y - grid->offset_y) / tile_pixel_height(grid));
+    return pos16((xy.x - grid->offset_x) / grid->tile_p_w, (xy.y - grid->offset_y) / tile_pixel_height(grid));
 }
 
 void tl_grid_set_txt_padding(grid_t *grid, float pp)

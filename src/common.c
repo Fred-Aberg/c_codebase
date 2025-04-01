@@ -100,7 +100,7 @@ void ui32_list_add(ui32_list_t *list, uint32_t value)
 	{
 		for (uint32_t i = 0; i < list->count; i++)
 		{
-			if(list->items[i] < value)
+			if(list->items[i] > value)
 			{
 				// Move all items from and including items[i] one step forward
 				memmove(&list->items[i + 1], &list->items[i], (list->count - i) * sizeof(uint32_t));

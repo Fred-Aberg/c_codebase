@@ -251,6 +251,7 @@ void ascui_destroy(container_t *container)
 			{
 				ascui_destroy(subcontainers[i]);
 			}
+			free(subcontainers);
 		}
 		break;
 		case BOX:
@@ -262,13 +263,14 @@ void ascui_destroy(container_t *container)
 			{
 				ascui_destroy(subcontainers[i]);
 			}
+			free(subcontainers);
 		}
 		break;
 		case BUTTON:
 		free(ascui_get_button_data(container)->text);
 		break;
 		case TEXT:
-		free(ascui_get_button_data(container)->text);
+		free(ascui_get_text_data(container)->text);
 		break;
 		default:
 		break;

@@ -232,7 +232,7 @@ int main(){
     UnloadFont(unscii);
     UnloadFont(unscii_fantasy);
     CloseWindow();
-    // ascui_destroy(top_container);
+    ascui_destroy(top_container);
 	tl_deinit_grid(main_grid);
     return 0;
 }

@@ -16,6 +16,8 @@ void dropdown_button(void *domain, void *function_data, cursor_t *cursor)
 	container->open = !container->open;
 }
 
+uint8_t global_int = 15;
+char global_str[INPUT_BUF_MAX_LEN] = "Hello...";
 
 container_t *top_container;
 container_t *subgrid_container;
@@ -25,13 +27,17 @@ void main_ui()
 	container_style_t s_0 = style(0, col8bt(0,0,0), col8bt(5,0,2), col8bt(7,7,3), '=', '|', '+');
 	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
 	top_container = ascui_container(true, PERCENTAGE, 100, VERTICAL, 2,
-		ascui_box(true, PERCENTAGE, 30, HORIZONTAL, s_0, 6, 
-			ascui_text(true, TILES, 3, strlen("\b000Tool\b \a700Box\a!"), "\b000Tool\b \a700Box\a!", s_1),
-			ascui_text(true, TILES, 5, strlen("\a700Test\a \b000Test\b \a003\b000Test\b\a"), "\a700Test\a \b000Test\b \a003\b000Test\b\a", s_1),
-			ascui_text(true, TILES, 5, strlen("\b001Test\b Hello"), "\b001Test\b Hello", s_1),
-			ascui_button(true, TILES, 5, strlen("S\a003ea\a"), "S\a003ea\a", s_1, NULL, NULL, NULL),
-			ascui_button(true, TILES, 5, strlen("Grasslands"), "Grasslands", s_1, NULL, NULL, NULL),
-			ascui_button(true, TILES, 5, strlen("Mountains"), "Mountains", s_1, NULL, NULL, NULL)
+		ascui_box(true, SELECTABLE, PERCENTAGE, 30, HORIZONTAL, s_0, 10, 
+			ascui_text(true, STATIC, TILES, 2, strlen("\b000Tool\b \a700Box\a!"), "\b000Tool\b \a700Box\a!", s_1),
+			ascui_text(true, STATIC, TILES, 2, strlen("\a700Test\a \b000Test\b \a003\b000Test\b\a"), "\a700Test\a \b000Test\b \a003\b000Test\b\a", s_1),
+			ascui_text(true, SELECTABLE, TILES, 5, strlen("\b001Test\b Hello"), "\b001Test\b Hello", s_1),
+			ascui_button(true, SELECTABLE, TILES, 5, strlen("S\a003ea\a"), "S\a003ea\a", s_1, NULL, NULL, NULL),
+			ascui_button(true, HOVERABLE, TILES, 5, strlen("Grasslands"), "Grasslands", s_1, NULL, NULL, NULL),
+			ascui_input(true, TILES, 3, s_1, S8_INT, -128, 127, &global_int),
+			ascui_input(true, TILES, 3, s_1, STRING, 0, 64, &global_str),
+			ascui_input_w_desc(true, TILES, 3, strlen("\n8bit: "), "\n8bit: ", s_1, S8_INT, -128, 127, &global_int),
+			ascui_input_w_desc(true, TILES, 3, strlen("\nstr: "), "\nstr: ", s_1, STRING, 0, 64, &global_str),
+			ascui_button(true, STATIC, TILES, 5, strlen("Mountains"), "Mountains", s_1, NULL, NULL, NULL)
 		),
 		(subgrid_container = ascui_subgrid(true, TILES, 1, NULL))
 	);
@@ -109,8 +115,6 @@ int main(){
 
 	
     while (!WindowShouldClose()){
-		tl_print_grid_info(subgrid);
-    
     	tick++;
 		frame_time = -GetTime();
     
@@ -169,7 +173,7 @@ int main(){
 				cursor.hovered_container->scroll_offset -= cursor.scroll;
 
 			// Select
-			if(cursor.hovered_container->container_type == BUTTON && cursor.left_button_pressed)
+			if(cursor.hovered_container->selectability == SELECTABLE && cursor.left_button_pressed)
 				cursor.selected_container = cursor.hovered_container;
 			// Deselect
 			if(cursor.hovered_container == cursor.selected_container && cursor.right_button_pressed)

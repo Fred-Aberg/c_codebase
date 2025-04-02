@@ -34,7 +34,7 @@ typedef enum
 	SUBGRID,
 	BUTTON,
 	DISPLAY,
-	INPUT_FIELD
+	INPUT
 }container_type_e;
 
 typedef enum
@@ -43,9 +43,14 @@ typedef enum
 	VERTICAL,
 }container_orientation_e;
 
+
+#define STATIC 0		// !STATIC => HOVERABLE
+#define HOVERABLE 1
+#define SELECTABLE 2	// SELECTABLE => HOVERABLE
 typedef struct
 {
 	bool open;
+	uint8_t selectability;
 	container_type_e container_type;
 	uint16_t scroll_offset;
 	uint8_t size;
@@ -82,21 +87,26 @@ typedef struct
 
 typedef enum
 {
-	STR,
-	SIGNED_INT,
-	UNSIGNED_INT,
-	SIGNED_SHORT,
-	UNSIGNED_SHORT,
-	SIGNED_CHAR,
-	UNSIGNED_CHAR,
+	U32_INT,	// 0
+	U16_INT,	// 1
+	U8_INT,		// 2
+	S32_INT,	// 3
+	S16_INT,	// 4
+	S8_INT,		// 5
+	STRING		// 6
 }input_field_type_e;
 
+#define INPUT_BUF_MAX_LEN 64
 typedef struct
 {
 	input_field_type_e type;
-	char buf[64];
-	void *var;
-}input_field_data_t;
+	container_style_t style;
+	int32_t min;				// min length of string or minimum value of digit
+	int32_t max;
+	uint8_t buf_i;
+	char buf[INPUT_BUF_MAX_LEN];
+	void *var;					// variable to be written to
+}input_data_t;
 
 typedef struct
 {
@@ -140,14 +150,20 @@ typedef struct
 /////
 container_t *ascui_container(bool open, size_type_e s_type, uint8_t size, container_orientation_e orientation, uint16_t n_subcontainers, ...);
 
-container_t *ascui_box(bool open, size_type_e s_type, uint8_t size, container_orientation_e orientation, container_style_t style, uint16_t n_subcontainers, ...);
+container_t *ascui_box(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, container_orientation_e orientation, container_style_t style, uint16_t n_subcontainers, ...);
 
-container_t *ascui_text(bool open, size_type_e s_type, uint8_t size, uint16_t text_len, char *text, container_style_t style);
+container_t *ascui_text(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, uint16_t text_len, char *text, container_style_t style);
 
 container_t *ascui_subgrid(bool open, size_type_e s_type, uint8_t size, grid_t *subgrid);
 
-container_t *ascui_button(bool open, size_type_e s_type, uint8_t size, uint16_t text_len, char *text, container_style_t style, 
+container_t *ascui_button(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, uint16_t text_len, char *text, container_style_t style, 
 						  UI_side_effect_func side_effect_func, void *domain, void *function_data);
+						  
+container_t *ascui_input(bool open, size_type_e s_type, uint8_t size, container_style_t style, 
+						  input_field_type_e input_type, int32_t min, int32_t max, void *var);
+						  
+container_t *ascui_input_w_desc(bool open, size_type_e s_type, uint8_t size, uint16_t text_len, char *text, container_style_t style, 
+						  input_field_type_e input_type, int32_t min, int32_t max, void *var);
 ////
 
 void ascui_draw_ui(grid_t *grid, container_t *top_container, cursor_t *cursor);

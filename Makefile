@@ -13,20 +13,27 @@
 # 	valgrind --leak-check=full ./output
 
 #gcc tl_test.c raytiles.c -g -lc -lm -lraylib -I /usr/local/include -o main
-_tl_test:
+clean: 
+	$(RM) -r bin/*
+	
+_tl_test: clean
 	gcc src/tl_test.c src/raytiles.c src/common.c -g -lc -lm -lraylib -I /usr/local/include -o bin/tl_test
 tl_test: _tl_test
 	./bin/tl_test
 
-_ascui_test:
+_ascui_test: clean
 	gcc src/ascui_test.c src/ascui.c src/texts.c src/raytiles.c src/common.c -g -lc -lm -lraylib -I /usr/local/include -o bin/ascui_test
 ascui_test: _ascui_test
 	./bin/ascui_test
 
-_ascui_constructor_test:
-	gcc src/ascui_constructor_test.c src/ascui.c src/texts.c src/raytiles.c src/common.c -g -lc -lm -lraylib -I /usr/local/include -o bin/ascui_constructor_test
-ascui_constructor_test: _ascui_constructor_test
-	./bin/ascui_constructor_test
+_main_test: clean
+	gcc src/main_test.c src/ascui.c src/texts.c src/raytiles.c src/common.c -Wall -g -lc -lm -lraylib -I /usr/local/include -o bin/main_test
+main_test: _main_test
+	./bin/main_test
+
+vg_main: _main_test
+	valgrind --tool=memcheck --leak-check=full --track-origins=yes ./bin/main_test
+	
 
 
 CC=gcc
@@ -47,5 +54,3 @@ $(BIN): $(OBJS)
 $(OBJ)/%.o: $(SRC)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-clean: 
-	$(RM) -r $(BINDIR)/* $(OBJ)/*

@@ -235,6 +235,10 @@ static void _print_ui(container_t *container, uint16_t indentation, bool last_ch
 			printf("[BUTTON]");
 			line_len += strlen("[BUTTON]");
 			break;
+		case INPUT:
+			printf("[INPUT]");
+			line_len += strlen("[INPUT]");
+			break;
 		default:
 			puts("[?]");
 			line_len += strlen("[?]");
@@ -828,4 +832,104 @@ void ascui_draw_ui(grid_t *grid, container_t *top_container, cursor_t *cursor)
 	pos16_t grid_size = tl_grid_get_dimensions(grid);
 	container_data_t *c_data = ascui_get_container_data(top_container);
 	ascui_draw_container(grid, top_container, 0, 0, grid_size.x - 1, grid_size.y - 1, c_data->orientation, cursor);
+}
+
+void ascui_update_cursor(grid_t *grid, cursor_t *cursor)
+{
+	pos16_t mouse_grid_pos = tl_screen_to_grid_coords(grid, pos16(GetMouseX(), GetMouseY()));
+	cursor->x = mouse_grid_pos.x;
+	cursor->y = mouse_grid_pos.y;
+	cursor->right_button_pressed = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
+	cursor->left_button_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+	cursor->middle_button_pressed = IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE);
+	cursor->scroll = GetMouseWheelMove();
+}
+
+void ascui_navigate_ui(grid_t *grid, container_t *top_container, cursor_t *cursor, double *ascui_drawing_time, Sound *click_sound, Sound *scroll_sound)
+{
+	double t_0;
+	double t_1;
+	if(ascui_drawing_time)
+		t_0 = GetTime();
+		
+	ascui_draw_ui(grid, top_container, cursor);
+
+	if(ascui_drawing_time)
+		{ t_1 = GetTime(); *ascui_drawing_time += t_1 - t_0; }
+
+	// Container hovering and selecting
+
+	if(cursor->hovered_container != NULL)
+	{
+		if(cursor->left_button_pressed && (cursor->hovered_container->container_type == BUTTON || cursor->hovered_container->selectability == SELECTABLE))
+		{
+			if(click_sound)
+				PlaySound(*click_sound);
+		}
+		
+		if (!(cursor->scroll > 0 && cursor->hovered_container->scroll_offset == 0) && cursor->scroll != 0)
+		{
+			cursor->hovered_container->scroll_offset -= cursor->scroll;
+			if (scroll_sound && !IsSoundPlaying(*scroll_sound))
+				PlaySound(*scroll_sound);
+		}
+			
+		if (cursor->hovered_container->container_type == BUTTON)
+		{
+			button_data_t *bt_data = ascui_get_button_data(cursor->hovered_container);
+			if(bt_data->side_effect_func)
+				bt_data->side_effect_func(bt_data->domain, bt_data->function_data, cursor);
+		}
+
+		// Select
+		if(cursor->left_button_pressed && cursor->hovered_container->selectability == SELECTABLE)
+		{
+			cursor->selected_container = cursor->hovered_container;
+		}
+		// Deselect
+		if(cursor->hovered_container == cursor->selected_container && cursor->right_button_pressed)
+			cursor->selected_container = NULL;
+	}
+}
+
+void ascui_adapt_grid_to_screen(grid_t *grid, int zoom_in_key, int zoom_out_key)
+{
+		int screensize_x;
+		int screensize_y;
+
+		if(IsKeyDown(zoom_in_key))
+		{
+			screensize_x = GetScreenWidth();
+			screensize_y = GetScreenHeight();
+			
+			uint16_t new_tile_size = grid->tile_p_w + 1;
+			tl_resize_grid(grid, 0, 0, screensize_x, screensize_y, new_tile_size);
+			tl_center_grid_on_screen(grid, screensize_x, screensize_y);
+		}
+		else if(IsKeyDown(zoom_out_key))
+		{
+			screensize_x = GetScreenWidth();
+			screensize_y = GetScreenHeight();
+		
+			uint16_t new_tile_size = grid->tile_p_w - 1;
+			tl_resize_grid(grid, 0, 0, screensize_x, screensize_y, new_tile_size);
+			tl_center_grid_on_screen(grid, screensize_x, screensize_y);
+		}
+
+		if(IsWindowResized())
+		{
+			screensize_x = GetScreenWidth();
+			screensize_y = GetScreenHeight();
+			
+			tl_resize_grid(grid, 0, 0, screensize_x, screensize_y, grid->tile_p_w);
+			tl_center_grid_on_screen(grid, screensize_x, screensize_y);
+		}
+}
+
+void ascui_run_ui(grid_t *grid, container_t *top_container, double *ascui_drawing_time, Sound *click_sound, Sound *scroll_sound, 
+						int zoom_in_key, int zoom_out_key, cursor_t *cursor)
+{
+	ascui_update_cursor(grid, cursor);
+	ascui_navigate_ui(grid, top_container, cursor, ascui_drawing_time, click_sound, scroll_sound);
+	ascui_adapt_grid_to_screen(grid, zoom_in_key, zoom_out_key);
 }

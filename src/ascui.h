@@ -5,7 +5,6 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
-#define NO_COLOR (Color){0, 0, 0, 0}
 #define style(font, bg_col, border_col, char_col, border_h_symbol, border_v_symbol, corner_symbol) (container_style_t){font, bg_col, border_col, char_col, border_h_symbol, border_v_symbol, corner_symbol}
 
 
@@ -132,22 +131,8 @@ typedef struct
 	container_style_t style;
 }button_data_t;
 
-#define TAG_MAX_LEN 64
-typedef struct
-{
-	char tag[TAG_MAX_LEN];
-	container_t *container;
-}container_tag_t;
+///// UI CONSTRUCTION
 
-# define REALLOC_PERCENTAGE_INCREASE 1.5f
-typedef struct
-{
-	container_tag_t *tags;
-	uint16_t capacity;
-	uint16_t count;
-}container_tag_list_t;
-
-/////
 container_t *ascui_container(bool open, size_type_e s_type, uint8_t size, container_orientation_e orientation, uint16_t n_subcontainers, ...);
 
 container_t *ascui_box(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, container_orientation_e orientation, container_style_t style, uint16_t n_subcontainers, ...);
@@ -164,9 +149,26 @@ container_t *ascui_input(bool open, size_type_e s_type, uint8_t size, container_
 						  
 container_t *ascui_input_w_desc(bool open, size_type_e s_type, uint8_t size, uint16_t text_len, char *text, container_style_t style, 
 						  input_field_type_e input_type, int32_t min, int32_t max, void *var);
-////
+						  
+///// TOP LEVEL FUNCTIONS
 
+// Inits all fields of the cursor (except for hovered and selected containers)
+void ascui_update_cursor(grid_t *grid, cursor_t *cursor);
+
+// Draws given UI, sets hovered and selected containers
 void ascui_draw_ui(grid_t *grid, container_t *top_container, cursor_t *cursor);
+
+// Draws given UI, sets hovered and selected containers and calls appropriate button functions etc.
+void ascui_navigate_ui(grid_t *grid, container_t *top_container, cursor_t *cursor, double *ascui_drawing_time, Sound *click_sound, Sound *scroll_sound);
+
+// Adapts main grid to screen
+void ascui_adapt_grid_to_screen(grid_t *grid, int screensize_x, int zoom_out_key);
+
+// Composite of all top lvl functions in order
+void ascui_run_ui(grid_t *grid, container_t *top_container, double *ascui_drawing_time, Sound *click_sound, Sound *scroll_sound,
+						int zoom_in_key, int zoom_out_key, cursor_t *cursor);
+
+///// CONTAINER DATA FETCHING
 
 container_data_t *ascui_get_container_data(container_t *container);
 
@@ -181,6 +183,8 @@ button_data_t *ascui_get_button_data(container_t *container);
 void ascui_set_nth_subcontainer(container_t *container, uint16_t n, container_t *subcontainer);
 
 container_t *ascui_get_nth_subcontainer(container_t *container, uint16_t n);
+
+///// MISC.
 
 void ascui_print_ui(container_t *container);
 

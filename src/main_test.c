@@ -110,75 +110,19 @@ int main(){
 	ascui_get_subgrid_data(subgrid_container)->subgrid = subgrid;
 	cursor_t cursor; 
 	ascui_print_ui(top_container);
-
+	pos16_t mouse_subgrid_pos;
 
 
 	
     while (!WindowShouldClose()){
     	tick++;
 		frame_time = -GetTime();
-    
-		pos16_t mouse_scr_pos = pos16(GetMouseX(), GetMouseY());
 
         BeginDrawing();
         ClearBackground(BLACK);
+        
+		ascui_run_ui(main_grid, top_container, &ascui_drawing_time, NULL, NULL, 45, 47, &cursor);
 
-		if(IsKeyDown(45))
-		{
-			uint16_t new_tile_size = main_grid->tile_p_w + 1;
-			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, new_tile_size);
-			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
-		}
-		else if(IsKeyDown(47))
-		{
-			uint16_t new_tile_size = main_grid->tile_p_w - 1;
-			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, new_tile_size);
-			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
-		}
-		
-
-		if(IsWindowResized())
-		{
-			screensize_x = GetScreenWidth();
-			screensize_y = GetScreenHeight();
-			
-			tl_resize_grid(main_grid, 0, 0, screensize_x, screensize_y, main_grid->tile_p_w);
-			tl_center_grid_on_screen(main_grid, screensize_x, screensize_y);
-		}
-		
-		// Main grid
-		pos16_t mouse_grid_pos = tl_screen_to_grid_coords(main_grid, mouse_scr_pos);
-		cursor.x = mouse_grid_pos.x;
-		cursor.y = mouse_grid_pos.y;
-		cursor.right_button_pressed = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
-		cursor.left_button_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-		cursor.scroll = GetMouseWheelMove();
-
-
-		// pos16_t main_grid_size = tl_grid_get_dimensions(main_grid);
-		
-		ascui_drawing_time = -GetTime();
-		ascui_draw_ui(main_grid, top_container, &cursor);
-		ascui_drawing_time += GetTime();
-
-		if(cursor.hovered_container != NULL)
-		{
-			if (cursor.hovered_container->container_type == BUTTON)
-			{
-				button_data_t *bt_data = ascui_get_button_data(cursor.hovered_container);
-				if(bt_data->side_effect_func)
-					bt_data->side_effect_func(bt_data->domain, bt_data->function_data, &cursor);
-			}
-			else if (!(cursor.scroll > 0 && cursor.hovered_container->scroll_offset == 0))
-				cursor.hovered_container->scroll_offset -= cursor.scroll;
-
-			// Select
-			if(cursor.hovered_container->selectability == SELECTABLE && cursor.left_button_pressed)
-				cursor.selected_container = cursor.hovered_container;
-			// Deselect
-			if(cursor.hovered_container == cursor.selected_container && cursor.right_button_pressed)
-				cursor.selected_container = NULL;
-		}
 		// printf("\nhov=[%p] sel[%p]", cursor.hovered_container, cursor.selected_container);
 
 		pos16_t subgrid_size = tl_grid_get_dimensions(subgrid);
@@ -186,11 +130,11 @@ int main(){
 
 		if(cursor.hovered_container == subgrid_container)
 		{
-			mouse_grid_pos = tl_screen_to_grid_coords(subgrid, mouse_scr_pos);
-			tl_plot_smbl_w_bg(subgrid, mouse_grid_pos.x, mouse_grid_pos.y, 'A', WHITE8B, BLACK8B, 1);
+			mouse_subgrid_pos = tl_screen_to_grid_coords(subgrid, pos16(GetMouseX(), GetMouseY()));
+			tl_plot_smbl_w_bg(subgrid, mouse_subgrid_pos.x, mouse_subgrid_pos.y, 'A', WHITE8B, BLACK8B, 1);
 		}
 		else
-			tl_plot_smbl_w_bg(main_grid, mouse_grid_pos.x, mouse_grid_pos.y, 'A', WHITE8B, BLACK8B, 0);
+			tl_plot_smbl_w_bg(main_grid, cursor.x, cursor.y, 'A', WHITE8B, BLACK8B, 0);
 
 		tl_rendering_time = -GetTime();
 		pos16_t main_grid_dcalls = tl_render_grid(main_grid);
@@ -224,9 +168,9 @@ int main(){
 		}
 		else
 		{
-			sprintf(buf, "(%u, %u)", mouse_grid_pos.x, mouse_grid_pos.y);
+			sprintf(buf, "(%u, %u)", cursor.x, cursor.y);
 			DrawText(buf, 0, 0, 24, c(200, 0, 200));
-			sprintf(buf, "(%u, %u)", mouse_scr_pos.x, mouse_scr_pos.y);
+			sprintf(buf, "(%u, %u)", mouse_subgrid_pos.x, mouse_subgrid_pos.y);
 			DrawText(buf, 0, 48, 24, c(200, 0, 200));
 	        DrawFPS(0,64);
 		}

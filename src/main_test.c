@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include "texts.h"
+
 #define DEF_COLOR (Color){20, 40, 29, 255}
 
 void dropdown_button(void *domain, void *function_data, cursor_t *cursor)
@@ -16,37 +18,121 @@ void dropdown_button(void *domain, void *function_data, cursor_t *cursor)
 	container->open = !container->open;
 }
 
+container_t *c_cntr;
+
+void navigate_button(void *domain, void *function_data, cursor_t *cursor)
+{
+	if (!cursor->left_button_pressed)
+		return;
+	c_cntr = *(container_t **)domain; 
+}
+
 uint8_t global_int = 15;
 char global_str[INPUT_BUF_MAX_LEN] = "Hello...";
 
-container_t *top_container;
+container_t *main_cntr;
+container_t *text_cntr;
+container_t *input_cntr;
+uint16_t text_index = 1;
+char *text_ptr;
 container_t *subgrid_container;
 
 void main_ui()
 {
 	container_style_t s_0 = style(0, col8bt(0,0,0), col8bt(5,0,2), col8bt(7,7,3), '=', '|', '+');
 	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
-	top_container = ascui_container(true, PERCENTAGE, 100, VERTICAL, 2,
-		ascui_box(true, SELECTABLE, PERCENTAGE, 30, HORIZONTAL, s_0, 10, 
-			ascui_text(true, STATIC, TILES, 2, strlen("\b000Tool\b \a700Box\a!"), "\b000Tool\b \a700Box\a!", s_1),
-			ascui_text(true, STATIC, TILES, 2, strlen("\a700Test\a \b000Test\b \a003\b000Test\b\a"), "\a700Test\a \b000Test\b \a003\b000Test\b\a", s_1),
-			ascui_text(true, SELECTABLE, TILES, 5, strlen("\b001Test\b Hello"), "\b001Test\b Hello", s_1),
-			ascui_button(true, SELECTABLE, TILES, 5, strlen("S\a003ea\a"), "S\a003ea\a", s_1, NULL, NULL, NULL),
-			ascui_button(true, HOVERABLE, TILES, 5, strlen("Grasslands"), "Grasslands", s_1, NULL, NULL, NULL),
-			ascui_input(true, TILES, 3, s_1, S8_INT, -128, 127, &global_int),
-			ascui_input(true, TILES, 3, s_1, STRING, 0, 64, &global_str),
-			ascui_input_w_desc(true, TILES, 3, strlen("\n8bit: "), "\n8bit: ", s_1, S8_INT, -128, 127, &global_int),
-			ascui_input_w_desc(true, TILES, 3, strlen("\nstr: "), "\nstr: ", s_1, STRING, 0, 64, &global_str),
-			ascui_button(true, STATIC, TILES, 5, strlen("Mountains"), "Mountains", s_1, NULL, NULL, NULL)
+	main_cntr = ascui_container(true, PERCENTAGE, 100, VERTICAL, 1,
+		ascui_box(true, HOVERABLE, TILES, 1, HORIZONTAL, s_0, 3, 
+			ascui_button(true, HOVERABLE, TILES, 3, "Text Examples >", ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &text_cntr, NULL),
+			ascui_button(true, HOVERABLE, TILES, 3, "Input Examples >", ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &input_cntr, NULL),
+			ascui_divider(s_1)
+		)
+	);
+}
+
+void text_example_ui()
+{
+	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
+	container_style_t s_title = style(1, col8bt(4,0,2), col8bt(2,0,1), col8bt(0,0,0), '-', '|', 'O');
+	container_style_t s_desc = style(0, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
+	container_style_t s_text = style(0, col8bt(4,0,2), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
+
+	text_cntr = ascui_box(true, HOVERABLE, PERCENTAGE, 100, HORIZONTAL, s_1, 14,
+		ascui_container(true, TILES, 3, VERTICAL, 3,
+			ascui_button(true, HOVERABLE, TILES, 7, "< BACK", ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &main_cntr, NULL),
+			ascui_text(true, STATIC, TILES, 15, "TEXT EXAMPLES", ALIGN_MIDDLE, ALIGN_MIDDLE, s_title),
+			ascui_input_w_desc(true, TILES, 8, " TXT: ", ALIGN_RIGHT, ALIGN_MIDDLE, TILES, 1, s_1, U16_INT, 0, texts_count - 1, &text_index)
 		),
-		(subgrid_container = ascui_subgrid(true, TILES, 1, NULL))
+		
+		ascui_divider(s_1),
+		ascui_container(true, TILES, 7, VERTICAL, 2,
+			ascui_text(true, STATIC, TILES, 17, "h:LEFT-v:TOP", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
+			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_LEFT, ALIGN_TOP, s_text)
+		),
+		ascui_container(true, TILES, 7, VERTICAL, 2,
+			ascui_text(true, STATIC, TILES, 17, "h:MIDDLE-v:TOP", ALIGN_MIDDLE, ALIGN_MIDDLE, s_text),
+			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_MIDDLE, ALIGN_TOP, s_desc)
+		),
+		ascui_container(true, TILES, 7, VERTICAL, 2,
+			ascui_text(true, STATIC, TILES, 17, "h:RIGHT-v:TOP", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
+			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_RIGHT, ALIGN_TOP, s_text)
+		),
+		
+		ascui_divider(s_1),
+		ascui_container(true, TILES, 7, VERTICAL, 2,
+			ascui_text(true, STATIC, TILES, 17, "h:LEFT-v:MIDDLE", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
+			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_LEFT, ALIGN_MIDDLE, s_text)
+		),
+		ascui_container(true, TILES, 7, VERTICAL, 2,
+			ascui_text(true, STATIC, TILES, 17, "h:MIDDLE-v:MIDDLE", ALIGN_MIDDLE, ALIGN_MIDDLE, s_text),
+			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc)
+		),
+		ascui_container(true, TILES, 7, VERTICAL, 2,
+			ascui_text(true, STATIC, TILES, 17, "h:RIGHT-v:MIDDLE", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
+			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_RIGHT, ALIGN_MIDDLE, s_text)
+		),
+
+		ascui_divider(s_1),
+		ascui_container(true, TILES, 7, VERTICAL, 2,
+			ascui_text(true, STATIC, TILES, 17, "h:LEFT-v:BOTTOM", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
+			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_LEFT, ALIGN_BOTTOM, s_text)
+		),
+		ascui_container(true, TILES, 7, VERTICAL, 2,
+			ascui_text(true, STATIC, TILES, 17, "h:MIDDLE-v:BOTTOM", ALIGN_MIDDLE, ALIGN_MIDDLE, s_text),
+			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_MIDDLE, ALIGN_BOTTOM, s_desc)
+		),
+		ascui_container(true, TILES, 7, VERTICAL, 2,
+			ascui_text(true, STATIC, TILES, 17, "h:RIGHT-v:BOTTOM", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
+			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_RIGHT, ALIGN_BOTTOM, s_text)
+		),
+		ascui_divider(s_1)
+	);
+}
+
+void input_example_ui()
+{
+	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
+	container_style_t s_title = style(1, col8bt(4,0,2), col8bt(2,0,1), col8bt(0,0,0), '-', '|', 'O');
+	container_style_t s_desc = style(0, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
+	container_style_t s_text = style(0, col8bt(4,0,2), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
+
+	input_cntr = ascui_box(true, HOVERABLE, PERCENTAGE, 100, HORIZONTAL, s_1, 5,
+		ascui_container(true, TILES, 3, VERTICAL, 2,
+			ascui_button(true, HOVERABLE, TILES, 7, "< BACK", ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &main_cntr, NULL),
+			ascui_text(true, STATIC, TILES, 1, "INPUT EXAMPLES", ALIGN_MIDDLE, ALIGN_MIDDLE, s_title)
+		),
+		ascui_divider(s_desc),
+		ascui_button(true, HOVERABLE, TILES, 3, "^ Dropdown Test", ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, ascui_dropdown_button_func, SUBST_NEXT_CNTR, SUBST_OWN_TEXT),
+		ascui_box(false, HOVERABLE, TILES, 10, HORIZONTAL, s_1, 3,
+			ascui_text(true, STATIC, TILES, 3, "item 1", ALIGN_MIDDLE, ALIGN_MIDDLE, s_title),
+			ascui_text(true, STATIC, TILES, 3, "item 2", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
+			ascui_text(true, STATIC, TILES, 3, "item 3", ALIGN_MIDDLE, ALIGN_MIDDLE, s_text)
+		),
+		ascui_divider(s_desc)
 	);
 }
 
 int main(){
-
-	printf("\nSTRUCT-SIZES [BYTES]:\n\t BG_INS=%lu\n\t SMBL_INS=%lu\n\t GEN_INS=%lu\n", sizeof(bg_instruction_t), sizeof(smbl_instruction_t), sizeof(instruction_t));
-
 	double tl_rendering_time;
 	double total_tl_rendering_time = 0;
 	double ascui_drawing_time;
@@ -92,7 +178,7 @@ int main(){
 		}	
    	}
 
-    InitWindow(screensize_x, screensize_y, "ascui_constr_test");
+    InitWindow(screensize_x, screensize_y, "c_codebase Test Suite");
     Font unscii = LoadFontEx("Resources/Fonts/unscii-8-alt.ttf", 32, 0, 256);
     Font unscii_fantasy = LoadFontEx("Resources/Fonts/unscii-8-fantasy.ttf", 32, 0, 256);
 
@@ -104,47 +190,53 @@ int main(){
 
 	// Main Grid
 	grid_t *main_grid = tl_init_grid(0, 0, screensize_x, screensize_y, tile_width, 1.0f, fonts, 200);
-	grid_t *subgrid = tl_init_grid(0, 0, 100, 100, tile_width, 1.0f, fonts, 200);
+	// grid_t *subgrid = tl_init_grid(0, 0, 100, 100, tile_width, 1.0f, fonts, 200);
 	// UI
 	main_ui();
-	ascui_get_subgrid_data(subgrid_container)->subgrid = subgrid;
+	text_example_ui();
+	input_example_ui();
+	// ascui_get_subgrid_data(subgrid_container)->subgrid = subgrid;
 	cursor_t cursor; 
-	ascui_print_ui(top_container);
-	pos16_t mouse_subgrid_pos;
+	ascui_print_ui(main_cntr);
+	ascui_print_ui(text_cntr);
+	ascui_print_ui(input_cntr);
+	// pos16_t mouse_subgrid_pos;
 
-
+	c_cntr = main_cntr;
 	
-    while (!WindowShouldClose()){
+    while (!WindowShouldClose())
+    {
+    	text_ptr = texts[text_index];
     	tick++;
 		frame_time = -GetTime();
 
         BeginDrawing();
         ClearBackground(BLACK);
         
-		ascui_run_ui(main_grid, top_container, &ascui_drawing_time, NULL, NULL, 45, 47, &cursor);
+		ascui_run_ui(main_grid, c_cntr, &ascui_drawing_time, NULL, NULL, 45, 47, &cursor);
 
 		// printf("\nhov=[%p] sel[%p]", cursor.hovered_container, cursor.selected_container);
 
-		pos16_t subgrid_size = tl_grid_get_dimensions(subgrid);
-		tl_draw_rect_smbl_w_bg(subgrid, 0, 0, subgrid_size.x - 1, subgrid_size.y - 1, '.', col8bt(5, 1, 2), col8bt(3, 0, 1), 1);
+		// pos16_t subgrid_size = tl_grid_get_dimensions(subgrid);
+		// tl_draw_rect_smbl_w_bg(subgrid, 0, 0, subgrid_size.x - 1, subgrid_size.y - 1, '.', col8bt(5, 1, 2), col8bt(3, 0, 1), 1);
 
-		if(cursor.hovered_container == subgrid_container)
-		{
-			mouse_subgrid_pos = tl_screen_to_grid_coords(subgrid, pos16(GetMouseX(), GetMouseY()));
-			tl_plot_smbl_w_bg(subgrid, mouse_subgrid_pos.x, mouse_subgrid_pos.y, 'A', WHITE8B, BLACK8B, 1);
-		}
-		else
-			tl_plot_smbl_w_bg(main_grid, cursor.x, cursor.y, 'A', WHITE8B, BLACK8B, 0);
+		// if(cursor.hovered_container == subgrid_container)
+		// {
+			// mouse_subgrid_pos = tl_screen_to_grid_coords(subgrid, pos16(GetMouseX(), GetMouseY()));
+			// tl_plot_smbl_w_bg(subgrid, mouse_subgrid_pos.x, mouse_subgrid_pos.y, 'A', WHITE8B, BLACK8B, 1);
+		// }
+		// else
+		tl_plot_smbl_w_bg(main_grid, cursor.x, cursor.y, 'A', WHITE8B, BLACK8B, 0);
 
 		tl_rendering_time = -GetTime();
 		pos16_t main_grid_dcalls = tl_render_grid(main_grid);
-		pos16_t sub_grid_dcalls = tl_render_grid(subgrid);
+		// pos16_t sub_grid_dcalls = tl_render_grid(subgrid);
 		tl_rendering_time += GetTime();
 
 		frame_time += GetTime();
 
-		n_bg_draw_calls = main_grid_dcalls.x + sub_grid_dcalls.x;
-		n_smbl_draw_calls = main_grid_dcalls.y + sub_grid_dcalls.y;
+		n_bg_draw_calls = main_grid_dcalls.x;
+		n_smbl_draw_calls = main_grid_dcalls.y;
 
 		total_frame_time += frame_time;
 		total_ascui_drawing_time += ascui_drawing_time;
@@ -170,8 +262,8 @@ int main(){
 		{
 			sprintf(buf, "(%u, %u)", cursor.x, cursor.y);
 			DrawText(buf, 0, 0, 24, c(200, 0, 200));
-			sprintf(buf, "(%u, %u)", mouse_subgrid_pos.x, mouse_subgrid_pos.y);
-			DrawText(buf, 0, 48, 24, c(200, 0, 200));
+			// sprintf(buf, "(%u, %u)", mouse_subgrid_pos.x, mouse_subgrid_pos.y);
+			// DrawText(buf, 0, 48, 24, c(200, 0, 200));
 	        DrawFPS(0,64);
 		}
 
@@ -180,7 +272,7 @@ int main(){
     UnloadFont(unscii);
     UnloadFont(unscii_fantasy);
     CloseWindow();
-    ascui_destroy(top_container);
+    ascui_destroy(main_cntr);
 	tl_deinit_grid(main_grid);
     return 0;
 }

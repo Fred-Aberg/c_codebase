@@ -40,6 +40,17 @@ int16_t clamp(int16_t minv, int16_t x, int16_t maxv);
 
 // static, not neccessarily contiguous
 
+#define new_array(type, capacity) {calloc(capacity, sizeof(type)), capacity}
+
+#define ORDERED 1
+#define UNORDERED 0
+#define DUPLICATES_ALLOWED 1
+#define NO_DUPLICATES 0
+#define new_list(type, init_capacity, ordered, dups_allowed) \
+{calloc(init_capacity, sizeof(type)), 0, init_capacity, ordered, dups_allowed }
+
+#define clear_list(list) ((ui8_list_t *)list)->count = 0
+
 typedef struct
 {
     uint8_t *items;
@@ -67,6 +78,8 @@ typedef struct
 uint32_t ui32_array_get(ui32_array_t array, uint32_t index);
 void ui32_array_set(ui32_array_t array, uint32_t index, uint32_t value);
 
+void free_array(void *array);
+
 /// LISTS
 
 #define LIST_REALLOC_INCREASE 1.5f
@@ -76,12 +89,42 @@ void ui32_array_set(ui32_array_t array, uint32_t index, uint32_t value);
 
 typedef struct
 {
+    uint8_t *items;
+    uint32_t count;
+    uint32_t capacity;
+    bool ordered;
+    bool duplicates_allowed;
+} ui8_list_t;
+
+uint8_t ui8_list_get(ui8_list_t list, uint8_t index);
+void ui8_list_add(ui8_list_t *list, uint8_t value);
+void ui8_list_remove(ui8_list_t *list, uint8_t index);
+
+typedef struct
+{
+    uint16_t *items;
+    uint32_t count;
+    uint32_t capacity;
+    bool ordered;
+    bool duplicates_allowed;
+} ui16_list_t;
+
+uint16_t ui16_list_get(ui16_list_t list, uint16_t index);
+void ui16_list_add(ui16_list_t *list, uint16_t value);
+void ui16_list_remove(ui16_list_t *list, uint16_t index);
+
+typedef struct
+{
     uint32_t *items;
     uint32_t count;
     uint32_t capacity;
     bool ordered;
+	bool duplicates_allowed;
+
 } ui32_list_t;
 
 uint32_t ui32_list_get(ui32_list_t list, uint32_t index);
 void ui32_list_add(ui32_list_t *list, uint32_t value);
 void ui32_list_remove(ui32_list_t *list, uint32_t index);
+
+void free_list(void *list);

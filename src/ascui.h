@@ -32,8 +32,11 @@ typedef enum
 	TEXT,
 	SUBGRID,
 	BUTTON,
+	DROPDOWN,
+	INPUT,
+	TOGGLE,
 	DISPLAY,
-	INPUT
+	DIVIDER
 }container_type_e;
 
 typedef enum
@@ -72,11 +75,21 @@ typedef struct
 	container_style_t style;
 }box_data_t;
 
+#define ALIGN_TOP		0
+#define ALIGN_MIDDLE	1
+#define ALIGN_BOTTOM	2
+#define ALIGN_LEFT		3
+#define ALIGN_RIGHT		4
+
 typedef struct
 {
 	container_style_t style;
 	uint16_t text_len;
 	char *text;
+	uint8_t h_alignment;		// TOP, MIDDLE or BOTTOM
+	uint8_t v_alignment;		// LEFT, RIGHT or MIDDLE
+	uint8_t baked_available_width;
+	ui8_list_t baked_line_widths;
 }text_data_t;
 
 typedef struct
@@ -120,36 +133,78 @@ typedef struct
 } cursor_t;
 
 typedef void (*UI_side_effect_func)(void *domain, void *function_data, cursor_t *cursor);
+void ascui_dropdown_button_func(void *dropdown_cntr, void *button_text, cursor_t *cursor);
 
+// Used for parameter substitution in buttons
+#define SUBST_NEXT_CNTR (void *)1
+#define SUBST_OWN_TEXT (void *)2
 typedef struct
 {
 	uint16_t text_len;
 	char *text;
+	uint8_t baked_available_width;
+	uint8_t h_alignment;		// TOP, MIDDLE or BOTTOM
+	uint8_t v_alignment;		// LEFT, RIGHT or MIDDLE
 	UI_side_effect_func side_effect_func;
 	void *domain;
 	void *function_data;
 	container_style_t style;
+	ui8_list_t baked_line_widths;
 }button_data_t;
+
+typedef struct
+{
+	container_style_t style_on;
+	container_style_t style_off;
+	bool *var;
+}toggle_data_t;
+
+
+typedef struct
+{
+	container_style_t style;
+	uint16_t text_len;
+	char *last_text;			// used to check whether text has changed
+	char **text;				// NOT owned by display
+	uint8_t h_alignment;		// TOP, MIDDLE or BOTTOM
+	uint8_t v_alignment;		// LEFT, RIGHT or MIDDLE
+	uint8_t baked_available_width;
+	ui8_list_t baked_line_widths;
+}display_data_t;
+
+typedef struct
+{
+	container_style_t style;
+}divider_data_t;
 
 ///// UI CONSTRUCTION
 
 container_t *ascui_container(bool open, size_type_e s_type, uint8_t size, container_orientation_e orientation, uint16_t n_subcontainers, ...);
 
-container_t *ascui_box(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, container_orientation_e orientation, container_style_t style, uint16_t n_subcontainers, ...);
+container_t *ascui_box(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, container_orientation_e orientation, 
+						container_style_t style, uint16_t n_subcontainers, ...);
 
-container_t *ascui_text(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, uint16_t text_len, char *text, container_style_t style);
+container_t *ascui_text(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style);
 
 container_t *ascui_subgrid(bool open, size_type_e s_type, uint8_t size, grid_t *subgrid);
 
-container_t *ascui_button(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, uint16_t text_len, char *text, container_style_t style, 
+container_t *ascui_button(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
 						  UI_side_effect_func side_effect_func, void *domain, void *function_data);
 						  
 container_t *ascui_input(bool open, size_type_e s_type, uint8_t size, container_style_t style, 
 						  input_field_type_e input_type, int32_t min, int32_t max, void *var);
 						  
-container_t *ascui_input_w_desc(bool open, size_type_e s_type, uint8_t size, uint16_t text_len, char *text, container_style_t style, 
-						  input_field_type_e input_type, int32_t min, int32_t max, void *var);
-						  
+container_t *ascui_toggle(bool *var, container_style_t style_on, container_style_t style_off);
+
+container_t *ascui_display(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char **text, uint8_t h_align, uint8_t v_align, container_style_t style);
+
+container_t *ascui_divider(container_style_t style);
+
+// Composites
+container_t *ascui_input_w_desc(bool open, size_type_e txt_s_type, uint8_t txt_size, char *text, uint8_t h_align, uint8_t v_align,
+								size_type_e input_s_type, uint8_t input_size, container_style_t style, 
+						  		input_field_type_e input_type, int32_t min, int32_t max, void *var);
+
 ///// TOP LEVEL FUNCTIONS
 
 // Inits all fields of the cursor (except for hovered and selected containers)
@@ -179,6 +234,12 @@ text_data_t *ascui_get_text_data(container_t *container);
 subgrid_data_t *ascui_get_subgrid_data(container_t *container);
 
 button_data_t *ascui_get_button_data(container_t *container);
+
+toggle_data_t *ascui_get_toggle_data(container_t *container);
+
+display_data_t *ascui_get_display_data(container_t *container);
+
+divider_data_t *ascui_get_divider_data(container_t *container);
 
 void ascui_set_nth_subcontainer(container_t *container, uint16_t n, container_t *subcontainer);
 

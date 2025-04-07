@@ -58,8 +58,9 @@ void text_example_ui()
 	container_style_t s_text = style(0, col8bt(4,0,2), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
 
 	text_cntr = ascui_box(true, HOVERABLE, PERCENTAGE, 100, HORIZONTAL, s_1, 14,
-		ascui_container(true, TILES, 3, VERTICAL, 3,
+		ascui_container(true, TILES, 3, VERTICAL, 4,
 			ascui_button(true, HOVERABLE, TILES, 7, "< BACK", ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &main_cntr, NULL),
+			ascui_divider(s_desc),
 			ascui_text(true, STATIC, TILES, 15, "TEXT EXAMPLES", ALIGN_MIDDLE, ALIGN_MIDDLE, s_title),
 			ascui_input_w_desc(true, TILES, 8, " TXT: ", ALIGN_RIGHT, ALIGN_MIDDLE, TILES, 1, s_1, U16_INT, 0, texts_count - 1, &text_index)
 		),
@@ -117,8 +118,9 @@ void input_example_ui()
 	container_style_t s_text = style(0, col8bt(4,0,2), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
 
 	input_cntr = ascui_box(true, HOVERABLE, PERCENTAGE, 100, HORIZONTAL, s_1, 5,
-		ascui_container(true, TILES, 3, VERTICAL, 2,
+		ascui_container(true, TILES, 3, VERTICAL, 3,
 			ascui_button(true, HOVERABLE, TILES, 7, "< BACK", ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &main_cntr, NULL),
+			ascui_divider(s_desc),
 			ascui_text(true, STATIC, TILES, 1, "INPUT EXAMPLES", ALIGN_MIDDLE, ALIGN_MIDDLE, s_title)
 		),
 		ascui_divider(s_desc),

@@ -396,7 +396,7 @@ static void calc_line_widths(ui8_list_t *line_widths, char *text, uint16_t text_
 	bool inline_col = false;
 	bool inline_font = false;
 
-	printf("\n\n%u -> %u", text_len, available_width);
+	// printf("\n\n%u -> %u", text_len, available_width);
 	for(uint16_t i = 0; i < text_len; i++)
 	{	
 		if(text[i] == INLINE_FONT)
@@ -422,6 +422,13 @@ static void calc_line_widths(ui8_list_t *line_widths, char *text, uint16_t text_
 			ui8_list_add(line_widths, c_width);
 			c_width = 0;
 			continue;
+		}
+
+		if(text[i] == '\0')
+		{
+			if(c_width)
+				ui8_list_add(line_widths, c_width);
+			return;
 		}
 
 		// -> text[i] has width
@@ -891,9 +898,18 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 	{
 		container_style_t style = ascui_get_divider_data(container)->style;
 
-		tl_draw_line_smbl_w_bg(grid, x0 + 1, y0, x1 - 1, y0, style.border_h_symbol, style.char_col, style.border_col, style.font);
-		tl_plot_smbl_w_bg(grid, x0, y0, style.corner_symbol, style.char_col, style.border_col, style.font);
-		tl_plot_smbl_w_bg(grid, x1, y0, style.corner_symbol, style.char_col, style.border_col, style.font);
+		if(parent_orientation == HORIZONTAL)
+		{
+			tl_draw_line_smbl_w_bg(grid, x0 + 1, y0, x1 - 1, y0, style.border_h_symbol, style.char_col, style.border_col, style.font);
+			tl_plot_smbl_w_bg(grid, x0, y0, style.corner_symbol, style.char_col, style.border_col, style.font);
+			tl_plot_smbl_w_bg(grid, x1, y0, style.corner_symbol, style.char_col, style.border_col, style.font);
+		}
+		else
+		{
+			tl_draw_line_smbl_w_bg(grid, x0, y0 + 1, x0, y1 - 1, style.border_v_symbol, style.char_col, style.border_col, style.font);
+			tl_plot_smbl_w_bg(grid, x0, y0, style.corner_symbol, style.char_col, style.border_col, style.font);
+			tl_plot_smbl_w_bg(grid, x0, y1, style.corner_symbol, style.char_col, style.border_col, style.font);
+		}
 
 		return 1;
 	}

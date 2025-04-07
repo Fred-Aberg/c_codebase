@@ -58,7 +58,7 @@ static void parse_subcontainers(uint16_t n_subcontainers, container_t **subconta
 	for (uint16_t i = 0; i < n_subcontainers; i++) 
 	{
 		c_subcontainer = subcontainers[i];
-		if(c_subcontainer->container_type == BUTTON)
+		if(c_subcontainer->container_type == BUTTON && ascui_get_button_data(c_subcontainer)->param_substitution)
 		{
 			if(ascui_get_button_data(c_subcontainer)->domain == SUBST_NEXT_CNTR)
 				ascui_get_button_data(c_subcontainer)->domain = subcontainers[i + 1];
@@ -141,7 +141,7 @@ container_t *ascui_subgrid(bool open, size_type_e s_type, uint8_t size, grid_t *
 	return container;
 }
 
-container_t *ascui_button(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
+container_t *_ascui_button(bool substitution, bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
 						  UI_side_effect_func side_effect_func, void *domain, void *function_data)
 {
  	container_t *container = create_container_stub(open, selectability, s_type, size, BUTTON);
@@ -159,6 +159,7 @@ container_t *ascui_button(bool open, uint8_t selectability, size_type_e s_type, 
 		memcpy(ascui_get_button_data(container)->text, text, ascui_get_button_data(container)->text_len);
 	}
 	
+	ascui_get_button_data(container)->param_substitution = substitution;
 	ascui_get_button_data(container)->side_effect_func = side_effect_func;
 	ascui_get_button_data(container)->domain = domain;
 	ascui_get_button_data(container)->function_data = function_data;
@@ -166,6 +167,18 @@ container_t *ascui_button(bool open, uint8_t selectability, size_type_e s_type, 
 	return container;
 }
 
+container_t *ascui_button(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
+						  UI_side_effect_func side_effect_func, void *domain, void *function_data)
+{
+	return _ascui_button(false, open, selectability, s_type, size, text, h_align, v_align, style, side_effect_func, domain, function_data);
+}
+
+container_t *ascui_button_subst(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
+						  UI_side_effect_func side_effect_func, void *domain, void *function_data)
+{
+	return _ascui_button(true, open, selectability, s_type, size, text, h_align, v_align, style, side_effect_func, domain, function_data);
+}
+						  
 container_t *ascui_input(bool open, size_type_e s_type, uint8_t size, container_style_t style, 
 						  input_field_type_e input_type, int32_t min, int32_t max, void *var)
 {

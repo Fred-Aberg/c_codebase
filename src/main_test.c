@@ -124,7 +124,7 @@ void input_example_ui()
 			ascui_text(true, STATIC, TILES, 1, "INPUT EXAMPLES", ALIGN_MIDDLE, ALIGN_MIDDLE, s_title)
 		),
 		ascui_divider(s_desc),
-		ascui_button(true, HOVERABLE, TILES, 3, "^ Dropdown Test", ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, ascui_dropdown_button_func, SUBST_NEXT_CNTR, SUBST_OWN_TEXT),
+		ascui_dropdown_button(TILES, 3, "^ Dropdown test", ALIGN_LEFT, ALIGN_MIDDLE, s_1),
 		ascui_box(false, HOVERABLE, TILES, 10, HORIZONTAL, s_1, 3,
 			ascui_text(true, STATIC, TILES, 3, "item 1", ALIGN_MIDDLE, ALIGN_MIDDLE, s_title),
 			ascui_text(true, STATIC, TILES, 3, "item 2", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),

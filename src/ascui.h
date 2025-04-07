@@ -140,6 +140,7 @@ void ascui_dropdown_button_func(void *dropdown_cntr, void *button_text, cursor_t
 #define SUBST_OWN_TEXT (void *)2
 typedef struct
 {
+	bool param_substitution;
 	uint16_t text_len;
 	char *text;
 	uint8_t baked_available_width;
@@ -190,7 +191,10 @@ container_t *ascui_subgrid(bool open, size_type_e s_type, uint8_t size, grid_t *
 
 container_t *ascui_button(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
 						  UI_side_effect_func side_effect_func, void *domain, void *function_data);
-						  
+
+container_t *ascui_button_subst(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
+						  UI_side_effect_func side_effect_func, void *domain, void *function_data);
+
 container_t *ascui_input(bool open, size_type_e s_type, uint8_t size, container_style_t style, 
 						  input_field_type_e input_type, int32_t min, int32_t max, void *var);
 						  
@@ -199,6 +203,10 @@ container_t *ascui_toggle(bool *var, container_style_t style_on, container_style
 container_t *ascui_display(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char **text, uint8_t h_align, uint8_t v_align, container_style_t style);
 
 container_t *ascui_divider(container_style_t style);
+
+#define ascui_dropdown_button(s_type, size, menu_text, h_align, v_align, style) \
+	ascui_button_subst(true, HOVERABLE, s_type, size, menu_text, h_align, v_align, style, ascui_dropdown_button_func, SUBST_NEXT_CNTR, SUBST_OWN_TEXT)
+
 
 // Composites
 container_t *ascui_input_w_desc(bool open, size_type_e txt_s_type, uint8_t txt_size, char *text, uint8_t h_align, uint8_t v_align,

@@ -6,7 +6,6 @@
 #include "common.h"
 #include "ascui.h"
 #include "raytiles.h"
-#include "texts.h"
 
 #define get_orientation(container) *(container_orientation_e *)(container->container_type_data)
 #define INLINE_COLOR '\a'
@@ -36,6 +35,8 @@ subgrid_data_t *ascui_get_subgrid_data(container_t *container) { return (subgrid
 button_data_t *ascui_get_button_data(container_t *container) { return (button_data_t *)container->container_type_data; }
 
 input_data_t *ascui_get_input_data(container_t *container) { return (input_data_t *)container->container_type_data; }
+
+slider_data_t *ascui_get_slider_data(container_t *container) { return (slider_data_t *)container->container_type_data; }
 
 toggle_data_t *ascui_get_toggle_data(container_t *container) { return (toggle_data_t *)container->container_type_data; }
 
@@ -112,22 +113,16 @@ container_t *ascui_box(bool open, uint8_t selectability, size_type_e s_type, uin
 	return container;
 }
 
-container_t *ascui_text(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style)
+container_t *ascui_text(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, str_t *text, uint8_t h_align, uint8_t v_align, container_style_t style)
 {
 	container_t *container = create_container_stub(open, selectability, s_type, size, TEXT);
 	container->container_type_data = calloc(1, sizeof(text_data_t));
+	ascui_get_text_data(container)->text = text;
 	ascui_get_text_data(container)->style = style;
 	ascui_get_text_data(container)->baked_available_width = 0;
 	ascui_get_text_data(container)->baked_line_widths = (ui8_list_t)new_list(uint8_t, 5, UNORDERED, DUPLICATES_ALLOWED);
 	ascui_get_text_data(container)->h_alignment = h_align;
 	ascui_get_text_data(container)->v_alignment = v_align;
-
-	if(text != NULL)
-	{
-		ascui_get_text_data(container)->text_len = strlen(text);
-		ascui_get_text_data(container)->text = calloc(ascui_get_text_data(container)->text_len, sizeof(char));
-		memcpy(ascui_get_text_data(container)->text, text, ascui_get_text_data(container)->text_len);
-	}
 
 	return container;
 }
@@ -141,23 +136,17 @@ container_t *ascui_subgrid(bool open, size_type_e s_type, uint8_t size, grid_t *
 	return container;
 }
 
-container_t *_ascui_button(bool substitution, bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
+container_t *_ascui_button(bool substitution, bool open, uint8_t selectability, size_type_e s_type, uint8_t size, str_t *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
 						  UI_side_effect_func side_effect_func, void *domain, void *function_data)
 {
  	container_t *container = create_container_stub(open, selectability, s_type, size, BUTTON);
 	container->container_type_data = calloc(1, sizeof(button_data_t));
 	ascui_get_button_data(container)->style = style;
+	ascui_get_button_data(container)->text = text;
 	ascui_get_button_data(container)->baked_available_width = 0;
 	ascui_get_button_data(container)->baked_line_widths = (ui8_list_t)new_list(uint8_t, 5, UNORDERED, DUPLICATES_ALLOWED);
 	ascui_get_button_data(container)->h_alignment = h_align;
 	ascui_get_button_data(container)->v_alignment = v_align;
-
-	if(text != NULL)
-	{
-		ascui_get_button_data(container)->text_len = strlen(text);
-		ascui_get_button_data(container)->text = calloc(ascui_get_button_data(container)->text_len, sizeof(char));
-		memcpy(ascui_get_button_data(container)->text, text, ascui_get_button_data(container)->text_len);
-	}
 	
 	ascui_get_button_data(container)->param_substitution = substitution;
 	ascui_get_button_data(container)->side_effect_func = side_effect_func;
@@ -167,20 +156,20 @@ container_t *_ascui_button(bool substitution, bool open, uint8_t selectability, 
 	return container;
 }
 
-container_t *ascui_button(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
+container_t *ascui_button(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, str_t *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
 						  UI_side_effect_func side_effect_func, void *domain, void *function_data)
 {
 	return _ascui_button(false, open, selectability, s_type, size, text, h_align, v_align, style, side_effect_func, domain, function_data);
 }
 
-container_t *ascui_button_subst(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
+container_t *ascui_button_subst(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, str_t *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
 						  UI_side_effect_func side_effect_func, void *domain, void *function_data)
 {
 	return _ascui_button(true, open, selectability, s_type, size, text, h_align, v_align, style, side_effect_func, domain, function_data);
 }
 						  
 container_t *ascui_input(bool open, size_type_e s_type, uint8_t size, container_style_t style, 
-						  input_field_type_e input_type, int32_t min, int32_t max, void *var)
+						  parameter_type_e input_type, int32_t min, int32_t max, var_binding_t *var_binding)
 {
  	container_t *container = create_container_stub(open, SELECTABLE, s_type, size, INPUT);
 	container->container_type_data = calloc(1, sizeof(input_data_t));
@@ -189,7 +178,22 @@ container_t *ascui_input(bool open, size_type_e s_type, uint8_t size, container_
 	ascui_get_input_data(container)->type = input_type;
 	ascui_get_input_data(container)->min = min;
 	ascui_get_input_data(container)->max = max;
-	ascui_get_input_data(container)->var = var;
+	ascui_get_input_data(container)->var_binding = var_binding;
+
+	return container;
+}
+
+container_t *ascui_slider(bool open, size_type_e s_type, uint8_t size, container_style_t style, 
+						  parameter_type_e input_type, int32_t min, int32_t max, var_binding_t *var_binding)
+{
+ 	container_t *container = create_container_stub(open, SELECTABLE, s_type, size, SLIDER);
+	container->container_type_data = calloc(1, sizeof(slider_data_t));
+	ascui_get_slider_data(container)->style = style;
+
+	ascui_get_slider_data(container)->type = input_type;
+	ascui_get_slider_data(container)->min = min;
+	ascui_get_slider_data(container)->max = max;
+	ascui_get_slider_data(container)->var_binding = var_binding;
 
 	return container;
 }
@@ -205,22 +209,28 @@ container_t *ascui_toggle(bool *var, container_style_t style_on, container_style
 	return container;
 }
 
-container_t *ascui_display(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char **text, uint8_t h_align, uint8_t v_align, container_style_t style)
+void _set_bound_var(var_binding_t *binding, intptr_t value)
+{
+	binding->var = value;
+	binding->update_flag = true;
+}
+
+container_t *ascui_display(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, parameter_type_e display_type, str_t *fmt, var_binding_t *var_binding, 
+							uint8_t h_align, uint8_t v_align, container_style_t style)
 {
 	container_t *container = create_container_stub(open, selectability, s_type, size, DISPLAY);
 	container->container_type_data = calloc(1, sizeof(display_data_t));
 	ascui_get_display_data(container)->style = style;
+	ascui_get_display_data(container)->display_type = display_type;
+	ascui_get_display_data(container)->fmt = fmt;
+	ascui_get_display_data(container)->var_binding = var_binding;
 	ascui_get_display_data(container)->baked_available_width = 0;
 	ascui_get_display_data(container)->baked_line_widths = (ui8_list_t)new_list(uint8_t, 5, UNORDERED, DUPLICATES_ALLOWED);
 	ascui_get_display_data(container)->h_alignment = h_align;
 	ascui_get_display_data(container)->v_alignment = v_align;
 
-	if(text != NULL && *text != NULL)
-	{
-		ascui_get_display_data(container)->text_len = strlen(*text);
-	}
-	ascui_get_display_data(container)->text = text;
-
+	ascui_get_display_data(container)->display_text = str_empty(12);
+	
 	return container;
 }
 
@@ -232,17 +242,16 @@ container_t *ascui_divider(container_style_t style)
 
 	return container;
 }
-
 /// COMPOSITES
 
-container_t *ascui_input_w_desc(bool open, size_type_e txt_s_type, uint8_t txt_size, char *text, uint8_t h_align, uint8_t v_align,
+container_t *ascui_input_w_desc(bool open, size_type_e txt_s_type, uint8_t txt_size, str_t *text, uint8_t h_align, uint8_t v_align,
 								size_type_e input_s_type, uint8_t input_size, container_style_t style, 
-						  		input_field_type_e input_type, int32_t min, int32_t max, void *var)
+						  		parameter_type_e input_type, int32_t min, int32_t max, var_binding_t *var_binding)
 {
 	container_t *input_field_carrier = ascui_container(open, input_s_type, input_size, VERTICAL, 2,
 		ascui_text(true, STATIC, txt_s_type, txt_size, text, h_align, v_align, style),
-		ascui_input(true, TILES, 1, style, input_type, min, max, var)
-		);
+		ascui_input(true, TILES, 1, style, input_type, min, max, var_binding)
+	);
 
 	return input_field_carrier;
 }
@@ -264,7 +273,7 @@ container_t *ascui_get_nth_subcontainer(container_t *container, uint16_t n)
 		n_subcontainers = ascui_get_box_data(container)->n_subcontainers;
 	}
 	else
-		ERROR("\nscui_get_nth_subcontainer: wrong container type")
+		ERROR("\nascui_get_nth_subcontainer: wrong container type")
 		
 	assert(n < n_subcontainers);
 
@@ -344,29 +353,40 @@ void ascui_destroy(container_t *container)
 	switch (type)
 	{
 		case CONTAINER:
-		subcontainers = ascui_get_container_data(container)->subcontainers;
-		n_subcontainers = ascui_get_container_data(container)->n_subcontainers;
-		if(n_subcontainers != 0)
-		{
-			for (uint16_t i = 0; i < n_subcontainers; i++)
+			subcontainers = ascui_get_container_data(container)->subcontainers;
+			n_subcontainers = ascui_get_container_data(container)->n_subcontainers;
+			if(n_subcontainers != 0)
 			{
-				ascui_destroy(subcontainers[i]);
-			}
-			free(subcontainers);
-		}break;
+				for (uint16_t i = 0; i < n_subcontainers; i++)
+				{
+					ascui_destroy(subcontainers[i]);
+				}
+				free(subcontainers);
+			}break;
 		case BOX:
-		subcontainers = ascui_get_box_data(container)->subcontainers;
-		n_subcontainers = ascui_get_box_data(container)->n_subcontainers;
-		if(n_subcontainers != 0)
-		{
-			for (uint16_t i = 0; i < n_subcontainers; i++)
+			subcontainers = ascui_get_box_data(container)->subcontainers;
+			n_subcontainers = ascui_get_box_data(container)->n_subcontainers;
+			if(n_subcontainers != 0)
 			{
-				ascui_destroy(subcontainers[i]);
-			}
-			free(subcontainers);
-		}break;
-		case BUTTON: free(ascui_get_button_data(container)->text); 					break;
-		case TEXT: free(ascui_get_text_data(container)->text); 						break;
+				for (uint16_t i = 0; i < n_subcontainers; i++)
+				{
+					ascui_destroy(subcontainers[i]);
+				}
+				free(subcontainers);
+			}break;
+		case BUTTON: 
+			free(ascui_get_button_data(container)->text); 					
+			free_list(&ascui_get_button_data(container)->baked_line_widths); 	
+			break;
+		case TEXT: 
+			free(ascui_get_text_data(container)->text); 						
+			free_list(&ascui_get_text_data(container)->baked_line_widths); 	
+			break;					
+		case DISPLAY: 
+			free(ascui_get_display_data(container)->display_text); 						
+			free(ascui_get_display_data(container)->fmt); 						
+			free_list(&ascui_get_display_data(container)->baked_line_widths); 						
+			break;
 		case SUBGRID: tl_deinit_grid(ascui_get_subgrid_data(container)->subgrid); 	break;
 		default:break;
 	}
@@ -401,7 +421,7 @@ static bool check_cursor_hover(cursor_t *cursor, container_t *container, uint8_t
 	return false;
 }
 
-static void calc_line_widths(ui8_list_t *line_widths, char *text, uint16_t text_len, uint8_t available_width)
+static void calc_line_widths(ui8_list_t *line_widths, str_t *text, uint8_t available_width)
 {
 	clear_list(line_widths);
 	
@@ -410,9 +430,9 @@ static void calc_line_widths(ui8_list_t *line_widths, char *text, uint16_t text_
 	bool inline_font = false;
 
 	// printf("\n\n%u -> %u", text_len, available_width);
-	for(uint16_t i = 0; i < text_len; i++)
+	for(uint16_t i = 0; i < text->length; i++)
 	{	
-		if(text[i] == INLINE_FONT)
+		if(str_get(text, i) == INLINE_FONT)
 		{
 			if(inline_font)
 				{ inline_font = false; i++; }
@@ -421,7 +441,7 @@ static void calc_line_widths(ui8_list_t *line_widths, char *text, uint16_t text_
 			continue; 
 		}
 		
-		if (text[i] == INLINE_COLOR)
+		if (str_get(text, i) == INLINE_COLOR)
 		{
 			if(inline_col)
 				{ inline_col = false; i++; }
@@ -430,14 +450,14 @@ static void calc_line_widths(ui8_list_t *line_widths, char *text, uint16_t text_
 			continue;
 		}
 		
-		if(text[i] == '\n')
+		if(str_get(text, i) == '\n')
 		{
 			ui8_list_add(line_widths, c_width);
 			c_width = 0;
 			continue;
 		}
 
-		if(text[i] == '\0')
+		if(str_get(text, i) == '\0')
 		{
 			if(c_width)
 				ui8_list_add(line_widths, c_width);
@@ -469,7 +489,7 @@ static void calc_line_widths(ui8_list_t *line_widths, char *text, uint16_t text_
 	// }
 }
 
-static void draw_text(grid_t *grid, uint16_t text_len, char *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
+static void draw_text(grid_t *grid, str_t *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
 						uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, bool invert_cols, ui8_list_t *line_widths, 
 						uint8_t *baked_available_width, uint16_t *scroll_offset)
 {
@@ -491,13 +511,15 @@ static void draw_text(grid_t *grid, uint16_t text_len, char *text, uint8_t h_ali
 
 	if(!text)
 		return;
+	if(text->length == 1)
+		return;
 
 	// Rebake line widths if needed
 	uint8_t available_width = x1 - x0 + 1;
 	if (*baked_available_width != x1 - x0 + 1) // change in available line width -> rebake
 	{
 		*baked_available_width = x1 - x0 + 1;
-		calc_line_widths(line_widths, text, text_len, available_width);
+		calc_line_widths(line_widths, text, available_width);
 	}
 
 	// Set max-scroll
@@ -510,10 +532,10 @@ static void draw_text(grid_t *grid, uint16_t text_len, char *text, uint8_t h_ali
 	// Calc vertical start
 	switch (v_align)
 	{
-		case ALIGN_TOP: 	vertical_start = 0;																		break;
-		case ALIGN_MIDDLE:	vertical_start = max((int)(y1 - y0 + 1) - (int)line_widths->count, 0) / 2;				break;
-		case ALIGN_BOTTOM: 	vertical_start = max((int)(y1 - y0 + 1) - (int)line_widths->count, 0);					break;
-		default:			vertical_start = 0; WARNINGF("ascui: Warning - invalid V alignment in text: %s", text)	break;
+		case ALIGN_TOP: 	vertical_start = 0;																					break;
+		case ALIGN_MIDDLE:	vertical_start = max((int)(y1 - y0 + 1) - (int)line_widths->count, 0) / 2;							break;
+		case ALIGN_BOTTOM: 	vertical_start = max((int)(y1 - y0 + 1) - (int)line_widths->count, 0);								break;
+		default:			vertical_start = 0; WARNINGF("ascui: Warning - invalid V alignment in text: %s", str_charr(text))		break;
 	}
 
 	
@@ -527,15 +549,22 @@ static void draw_text(grid_t *grid, uint16_t text_len, char *text, uint8_t h_ali
 	// Set initial line width
 	switch (h_align)
 	{
-		case ALIGN_LEFT: 	horizontal_start = 0;																			break;
-		case ALIGN_MIDDLE: 	horizontal_start = max((int)(available_width) - (int)ui8_list_get(*line_widths, 0), 0) / 2;		break;
-		case ALIGN_RIGHT: 	horizontal_start = max((int)(available_width) - (int)ui8_list_get(*line_widths, 0), 0);			break;
-		default:			horizontal_start = 0; WARNINGF("ascui: Warning - invalid H alignment in text: %s", text)		break;
+		case ALIGN_LEFT: 	horizontal_start = 0;																				break;
+		case ALIGN_MIDDLE: 	horizontal_start = max((int)(available_width) - (int)ui8_list_get(*line_widths, 0), 0) / 2;			break;
+		case ALIGN_RIGHT: 	horizontal_start = max((int)(available_width) - (int)ui8_list_get(*line_widths, 0), 0);				break;
+		default:			horizontal_start = 0; WARNINGF("ascui: Warning - invalid H alignment in text: %s", str_charr(text))	break;
 	}
 
-	for(uint16_t i = 0; i < text_len; i++)
+	char c;
+	
+	for(uint16_t i = 0; i < text->length; i++)
 	{
-		if(text[i] == INLINE_FONT)
+		c = str_get(text, i);
+
+		if(c == 0)
+			break;
+		
+		if(c == INLINE_FONT)
 		{
 			if(inl_font_active)
 			{
@@ -545,26 +574,26 @@ static void draw_text(grid_t *grid, uint16_t text_len, char *text, uint8_t h_ali
 			else
 			{
 				inl_font_active = true;
-				font = atoi(&text[i + 1]);
+				font = atoi(&str_charr(text)[i + 1]);
 				i += 3;
 			}
 			continue;
 		}
 
-		if (text[i] == INLINE_COLOR)
+		if (c == INLINE_COLOR)
 		{
 			if(inl_color_active)
 				inl_color_active = false;
 			else
 			{
 				inl_color_active = true;
-				inl_color = col8bt(text[i + 1] - 48, text[i + 2] - 48, text[i + 3] - 48);
+				inl_color = col8bt(str_get(text, i + 1) - 48, str_get(text, i + 2) - 48, str_get(text, i + 3) - 48);
 				i += 3;
 			}
 			continue;
 		}
 
-		if (text[i] == '\n' || _x + horizontal_start >= available_width) // new line if overflow or \n
+		if (c == '\n' || _x + horizontal_start >= available_width) // new line if overflow or \n
 		{	
 			_y++;
 			_x = 0;
@@ -578,21 +607,21 @@ static void draw_text(grid_t *grid, uint16_t text_len, char *text, uint8_t h_ali
 					case ALIGN_LEFT: 	horizontal_start = 0;																					break;
 					case ALIGN_MIDDLE: 	horizontal_start = max((int)(available_width) - (int)ui8_list_get(*line_widths, c_line), 0) / 2;		break;
 					case ALIGN_RIGHT: 	horizontal_start = max((int)(available_width) - (int)ui8_list_get(*line_widths, c_line), 0);			break;
-					default:			horizontal_start = 0; WARNINGF("ascui: Warning - invalid H alignment in text: %s", text) 				break;
+					default:			horizontal_start = 0; WARNINGF("ascui: Warning - invalid H alignment in text: %s", str_charr(text)) 		break;
 				}
 
 			}
 			
-			if(text[i] == '\n') // skip \n
+			if(c == '\n') // skip \n
 				continue; 
 		}
 
 		if(_y >= 0 && !(y0 + max(0, _y) > y1)) // do not render if tiles have been "scrolled" out of view - or if the text overflows
 		{
 			if(inl_color_active)
-				tl_plot_smbl(grid, x0 + _x + horizontal_start, y0 + _y, text[i], inl_color, font);
+				tl_plot_smbl(grid, x0 + _x + horizontal_start, y0 + _y, c, inl_color, font);
 			else
-				tl_plot_smbl(grid, x0 + _x + horizontal_start, y0 + _y, text[i], smbl_col, font);
+				tl_plot_smbl(grid, x0 + _x + horizontal_start, y0 + _y, c, smbl_col, font);
 		}
 		_x++;
 	}
@@ -753,7 +782,7 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 	{
 		text_data_t *t_data = ascui_get_text_data(container);
 
-		draw_text(grid, t_data->text_len, t_data->text, t_data->h_alignment, t_data->v_alignment, t_data->style, 
+		draw_text(grid, t_data->text, t_data->h_alignment, t_data->v_alignment, t_data->style, 
 								x0, y0, x1, y1, selected || hovered, &t_data->baked_line_widths, 
 								&t_data->baked_available_width, &container->scroll_offset);
 
@@ -774,7 +803,7 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 	{
 		button_data_t *bt_data = ascui_get_button_data(container);
 
-		draw_text(grid, bt_data->text_len, bt_data->text, bt_data->h_alignment, bt_data->v_alignment, bt_data->style, 
+		draw_text(grid, bt_data->text, bt_data->h_alignment, bt_data->v_alignment, bt_data->style, 
 								x0, y0, x1, y1, selected || hovered, &bt_data->baked_line_widths, 
 								&bt_data->baked_available_width, &container->scroll_offset);
 
@@ -800,56 +829,39 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 
 		tl_draw_rect_bg(grid, x0, y0, x1, y1, bg_col);
 
-		if(!selected)
+		if(selected)
 		{
-			input_data->buf_i = 0;
-			switch (input_data->type)
-			{
-				case U32_INT: 	sprintf(input_data->buf, "%u", *(uint32_t *)input_data->var); 	break;
-				case U16_INT: 	sprintf(input_data->buf, "%u", *(uint16_t *)input_data->var); 	break;
-				case U8_INT: 	sprintf(input_data->buf, "%u", *(uint8_t *)input_data->var); 	break;
-				case S32_INT: 	sprintf(input_data->buf, "%d", *(int32_t *)input_data->var); 	break;
-				case S16_INT: 	sprintf(input_data->buf, "%d", *(int16_t *)input_data->var);	break;
-				case S8_INT: 	sprintf(input_data->buf, "%d", *(int8_t *)input_data->var); 	break;
-				case STRING: 	sprintf(input_data->buf, "%s", (char *)input_data->var); 		break;
-				default: 		sprintf(input_data->buf, "???"); 								break;
-			}
-
-			uint16_t i = 0;
-			while (input_data->buf[i] != '\0' && i < x1 - x0 && i < INPUT_BUF_MAX_LEN)
-			{
-				tl_plot_smbl(grid, x0 + i, y0 + vertical_midpoint, input_data->buf[i], smbl_col, input_data->style.font);
-				input_data->buf_i++;
-				i++;
-			}
-		}
-		else
-		{
+			uint8_t t = 2 * GetTime();
+			t = t & 1; 
 			char c = GetCharPressed();
+			int k = GetKeyPressed();
 
-			if (IsKeyPressed(KEY_ENTER))
+			if (k == KEY_ENTER)
 			{
-				
-				input_data->buf[input_data->buf_i] = '\0'; // Cut off at end of input
-				if(input_data->type != STRING)
-					input_data->buf[input_data->buf_i] = '\0'; // Cut off at end of input
-				else
+				if(input_data->type == STRING)
 					input_data->buf[min(input_data->max, input_data->buf_i)] = '\0'; // Cut off string at max, or input length
+				else
+					input_data->buf[input_data->buf_i] = '\0'; // Cut off at end of input
+
+				char *end_ptr = &input_data->buf[input_data->buf_i];
 					
 				switch (input_data->type)
 				{
-					case U32_INT:  	*(uint32_t *)input_data->var = clamp(input_data->min, atol(input_data->buf), input_data->max); 	break;
-					case U16_INT:  	*(uint16_t *)input_data->var = clamp(input_data->min, atoi(input_data->buf), input_data->max); 	break;
-					case U8_INT: 	*(uint8_t *)input_data->var = clamp(input_data->min, atoi(input_data->buf), input_data->max); 	break;
-					case S32_INT:  	*(int32_t *)input_data->var = clamp(input_data->min, atol(input_data->buf), input_data->max); 	break;
-					case S16_INT:  	*(int16_t *)input_data->var = clamp(input_data->min, atoi(input_data->buf), input_data->max);	break;
-					case S8_INT: 	*(int8_t *)input_data->var = clamp(input_data->min, atoi(input_data->buf), input_data->max); 	break;
-					case STRING: 	sprintf((char *)input_data->var, "%s", input_data->buf); 										break;
-					default:		 																								break;
+					case U32_INT:  	set_bound_var(input_data->var_binding, clamp(input_data->min, atol(input_data->buf), input_data->max)); 				break;
+					case U16_INT:  	set_bound_var(input_data->var_binding, clamp(input_data->min, atoi(input_data->buf), input_data->max)); 				break;
+					case U8_INT: 	set_bound_var(input_data->var_binding, clamp(input_data->min, atoi(input_data->buf), input_data->max)); 				break;
+					case S32_INT:  	set_bound_var(input_data->var_binding, clamp(input_data->min, atol(input_data->buf), input_data->max)); 				break;
+					case S16_INT:  	set_bound_var(input_data->var_binding, clamp(input_data->min, atoi(input_data->buf), input_data->max));					break;
+					case S8_INT: 	set_bound_var(input_data->var_binding, clamp(input_data->min, atoi(input_data->buf), input_data->max)); 				break;
+					case FLOAT: 	float f = flclamp(input_data->min, strtof(input_data->buf, &end_ptr), input_data->max);
+									memcpy(&input_data->var_binding->var, &f, sizeof(float));																break;
+					case STRING: 	str_write_from_buf((str_t **)(&input_data->var_binding->var), input_data->buf, INPUT_BUF_MAX_LEN); 
+									input_data->var_binding->update_flag = true; 																			break;
+					default:		 																														break;
 				}
 				cursor->selected_container = NULL; // Deselect after ENTER
 			}
-			else if(IsKeyPressed(KEY_BACKSPACE) && input_data->buf_i > 0)
+			else if(k == KEY_BACKSPACE && input_data->buf_i > 0)
 				input_data->buf_i--;
 			else if(c && input_data->buf_i < INPUT_BUF_MAX_LEN)
 			{
@@ -864,6 +876,41 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 				tl_plot_smbl(grid, x0 + i + 1, y0 + vertical_midpoint, input_data->buf[i], smbl_col, input_data->style.font);
 				i++;
 			}
+			// Cursor bar
+			if(t)
+				tl_plot_smbl(grid, x0 + input_data->buf_i + 1, y0 + vertical_midpoint, '|', smbl_col, input_data->style.font);
+		}
+		else	// NOT SELECTED
+		{
+			if(input_data->var_binding->update_flag)
+			{
+				input_data->var_binding->update_flag = false;
+
+				input_data->buf[INPUT_BUF_MAX_LEN] = 0;	// Setup buffer overflow detection
+				switch (input_data->type)
+				{
+					case U32_INT: 	sprintf(input_data->buf, "%u", (uint32_t)input_data->var_binding->var); 			break;
+					case U16_INT: 	sprintf(input_data->buf, "%u", (uint16_t)input_data->var_binding->var); 			break;
+					case U8_INT: 	sprintf(input_data->buf, "%u", (uint8_t)input_data->var_binding->var); 				break;
+					case S32_INT: 	sprintf(input_data->buf, "%d", (int32_t)input_data->var_binding->var); 				break;
+					case S16_INT: 	sprintf(input_data->buf, "%d", (int16_t)input_data->var_binding->var);				break;
+					case S8_INT: 	sprintf(input_data->buf, "%d", (int8_t)input_data->var_binding->var); 				break;
+					case STRING: 	sprintf(input_data->buf, "%s", str_charr((str_t *)input_data->var_binding->var)); 	break;
+					case FLOAT: 	sprintf(input_data->buf, "%f", (float)input_data->var_binding->var); 				break;
+					default: 		sprintf(input_data->buf, "???"); 													break;
+				}
+				if(input_data->buf[INPUT_BUF_MAX_LEN] != 0)	// Check buffer overflow
+					ERRORF("ascui: input buffer overflow, buf='%s'", input_data->buf)
+					
+				input_data->buf_i = min(strlen(input_data->buf), INPUT_BUF_MAX_LEN);
+			}
+
+			uint16_t i = 0;
+			while (input_data->buf[i] != '\0' && i < x1 - x0 && i < INPUT_BUF_MAX_LEN)
+			{
+				tl_plot_smbl(grid, x0 + i, y0 + vertical_midpoint, input_data->buf[i], smbl_col, input_data->style.font);
+				i++;
+			}
 		}
 		
 		return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
@@ -872,7 +919,7 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 	{
 		toggle_data_t *tg_data = ascui_get_toggle_data(container);
 
-		if(hovered && cursor->right_button_pressed)
+		if(hovered && cursor->left_button_pressed)
 			*tg_data->var = !(*tg_data->var);
 		
 		container_style_t style = (*tg_data->var)? tg_data->style_on : tg_data->style_off;
@@ -888,22 +935,26 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 	{
 		display_data_t *d_data = ascui_get_display_data(container);
 
-		if(d_data->text)
+		if(d_data->var_binding->update_flag)	// Reconstruct buf and signal rebake of lines if var is updated
 		{
-			if(*d_data->text != d_data->last_text) // signal rebake if text has been changed from elsewhere
+			d_data->baked_available_width = 0;
+			switch (d_data->display_type)
 			{
-				d_data->baked_available_width = 0;
-				d_data->last_text = *d_data->text;
-				if(*d_data->text)
-					d_data->text_len = strlen(*d_data->text);
+				case U32_INT: 	str_write_from_sprintf(12, &d_data->display_text, d_data->fmt, (uint32_t)d_data->var_binding->var);							break;
+				case U16_INT: 	str_write_from_sprintf(12, &d_data->display_text, d_data->fmt, (uint16_t)d_data->var_binding->var); 						break;
+				case U8_INT: 	str_write_from_sprintf(12, &d_data->display_text, d_data->fmt, (uint8_t)d_data->var_binding->var); 							break;
+				case S32_INT: 	str_write_from_sprintf(12, &d_data->display_text, d_data->fmt, (int32_t)d_data->var_binding->var);							break;
+				case S16_INT: 	str_write_from_sprintf(12, &d_data->display_text, d_data->fmt, (int16_t)d_data->var_binding->var); 							break;
+				case S8_INT: 	str_write_from_sprintf(12, &d_data->display_text, d_data->fmt, (int8_t)d_data->var_binding->var); 							break;
+				case FLOAT: 	str_write_from_sprintf(12, &d_data->display_text, d_data->fmt, (float)d_data->var_binding->var); 							break;
+				case STRING: 	str_write_from_str(&d_data->display_text, (str_t *)d_data->var_binding->var);												break;
+				default: 		str_write(&d_data->display_text, "???"); 																					break;
 			}
-			
-			draw_text(grid, d_data->text_len, *d_data->text, d_data->h_alignment, d_data->v_alignment, d_data->style, 
-									x0, y0, x1, y1, selected || hovered, &d_data->baked_line_widths, 
-									&d_data->baked_available_width, &container->scroll_offset);
 		}
-		else
-			tl_draw_rect_bg(grid, x0, y0, x1, y1, d_data->style.bg_col);
+
+		draw_text(grid, d_data->display_text, d_data->h_alignment, d_data->v_alignment, d_data->style, 
+								x0, y0, x1, y1, selected || hovered, &d_data->baked_line_widths, 
+								&d_data->baked_available_width, &container->scroll_offset);
 
 		return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
 	}
@@ -1047,7 +1098,7 @@ void ascui_dropdown_button_func(void *dropdown_cntr, void *button_text, cursor_t
 		return;
 	container_t *container = (container_t *)dropdown_cntr; 
 	container->open = !container->open;
-	((char *)button_text)[0] = (container->open)? 'V' : '^';
+	str_set(button_text, 0, (container->open)? 'V' : '^');
 }
 
 

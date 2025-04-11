@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include "texts.h"
+#include "texts.c"
 
 #define DEF_COLOR (Color){20, 40, 29, 255}
 
@@ -33,8 +33,11 @@ char global_str[INPUT_BUF_MAX_LEN] = "Hello...";
 container_t *main_cntr;
 container_t *text_cntr;
 container_t *input_cntr;
-uint16_t text_index = 1;
-char *text_ptr;
+
+
+
+var_binding_t text_index_binding;;
+var_binding_t text_ptr_binding;
 container_t *subgrid_container;
 
 void main_ui()
@@ -43,8 +46,8 @@ void main_ui()
 	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
 	main_cntr = ascui_container(true, PERCENTAGE, 100, VERTICAL, 1,
 		ascui_box(true, HOVERABLE, TILES, 1, HORIZONTAL, s_0, 3, 
-			ascui_button(true, HOVERABLE, TILES, 3, "Text Examples >", ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &text_cntr, NULL),
-			ascui_button(true, HOVERABLE, TILES, 3, "Input Examples >", ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &input_cntr, NULL),
+			ascui_button(true, HOVERABLE, TILES, 3, str("Text Examples >"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &text_cntr, NULL),
+			ascui_button(true, HOVERABLE, TILES, 3, str("Input Examples >"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &input_cntr, NULL),
 			ascui_divider(s_1)
 		)
 	);
@@ -52,6 +55,10 @@ void main_ui()
 
 void text_example_ui()
 {
+	create_example_strings();
+	text_index_binding = bind_var(0);
+	text_ptr_binding = bind_var(example_strings[0]);
+
 	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
 	container_style_t s_title = style(1, col8bt(4,0,2), col8bt(2,0,1), col8bt(0,0,0), '-', '|', 'O');
 	container_style_t s_desc = style(0, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
@@ -59,77 +66,98 @@ void text_example_ui()
 
 	text_cntr = ascui_box(true, HOVERABLE, PERCENTAGE, 100, HORIZONTAL, s_1, 14,
 		ascui_container(true, TILES, 3, VERTICAL, 4,
-			ascui_button(true, HOVERABLE, TILES, 7, "< BACK", ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &main_cntr, NULL),
+			ascui_button(true, HOVERABLE, TILES, 7, str("< BACK"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &main_cntr, NULL),
 			ascui_divider(s_desc),
-			ascui_text(true, STATIC, TILES, 15, "TEXT EXAMPLES", ALIGN_MIDDLE, ALIGN_MIDDLE, s_title),
-			ascui_input_w_desc(true, TILES, 8, " TXT: ", ALIGN_RIGHT, ALIGN_MIDDLE, TILES, 1, s_1, U16_INT, 0, texts_count - 1, &text_index)
+			ascui_text(true, STATIC, TILES, 15, str("TEXT EXAMPLES"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_title),
+			ascui_input_w_desc(true, TILES, 8, str(" TXT: "), ALIGN_RIGHT, ALIGN_MIDDLE, TILES, 1, s_1, U16_INT, 0, N_STRINGS - 1, &text_index_binding)
 		),
 		
 		ascui_divider(s_1),
 		ascui_container(true, TILES, 7, VERTICAL, 2,
-			ascui_text(true, STATIC, TILES, 17, "h:LEFT-v:TOP", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
-			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_LEFT, ALIGN_TOP, s_text)
+			ascui_text(true, STATIC, TILES, 17, str("h:LEFT-v:TOP"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
+			ascui_display(true, HOVERABLE, TILES, 1, STRING, str("%s"), &text_ptr_binding, ALIGN_LEFT, ALIGN_TOP, s_text)
 		),
 		ascui_container(true, TILES, 7, VERTICAL, 2,
-			ascui_text(true, STATIC, TILES, 17, "h:MIDDLE-v:TOP", ALIGN_MIDDLE, ALIGN_MIDDLE, s_text),
-			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_MIDDLE, ALIGN_TOP, s_desc)
+			ascui_text(true, STATIC, TILES, 17, str("h:MIDDLE-v:TOP"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_text),
+			ascui_display(true, HOVERABLE, TILES, 1, STRING, str("%s"), &text_ptr_binding, ALIGN_MIDDLE, ALIGN_TOP, s_desc)
 		),
 		ascui_container(true, TILES, 7, VERTICAL, 2,
-			ascui_text(true, STATIC, TILES, 17, "h:RIGHT-v:TOP", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
-			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_RIGHT, ALIGN_TOP, s_text)
+			ascui_text(true, STATIC, TILES, 17, str("h:RIGHT-v:TOP"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
+			ascui_display(true, HOVERABLE, TILES, 1, STRING, str("%s"), &text_ptr_binding, ALIGN_RIGHT, ALIGN_TOP, s_text)
 		),
 		
 		ascui_divider(s_1),
 		ascui_container(true, TILES, 7, VERTICAL, 2,
-			ascui_text(true, STATIC, TILES, 17, "h:LEFT-v:MIDDLE", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
-			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_LEFT, ALIGN_MIDDLE, s_text)
+			ascui_text(true, STATIC, TILES, 17, str("h:LEFT-v:MIDDLE"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
+			ascui_display(true, HOVERABLE, TILES, 1, STRING, str("%s"), &text_ptr_binding, ALIGN_LEFT, ALIGN_MIDDLE, s_text)
 		),
 		ascui_container(true, TILES, 7, VERTICAL, 2,
-			ascui_text(true, STATIC, TILES, 17, "h:MIDDLE-v:MIDDLE", ALIGN_MIDDLE, ALIGN_MIDDLE, s_text),
-			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc)
+			ascui_text(true, STATIC, TILES, 17, str("h:MIDDLE-v:MIDDLE"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_text),
+			ascui_display(true, HOVERABLE, TILES, 1, STRING, str("%s"), &text_ptr_binding, ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc)
 		),
 		ascui_container(true, TILES, 7, VERTICAL, 2,
-			ascui_text(true, STATIC, TILES, 17, "h:RIGHT-v:MIDDLE", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
-			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_RIGHT, ALIGN_MIDDLE, s_text)
+			ascui_text(true, STATIC, TILES, 17, str("h:RIGHT-v:MIDDLE"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
+			ascui_display(true, HOVERABLE, TILES, 1, STRING, str("%s"), &text_ptr_binding, ALIGN_RIGHT, ALIGN_MIDDLE, s_text)
 		),
 
 		ascui_divider(s_1),
 		ascui_container(true, TILES, 7, VERTICAL, 2,
-			ascui_text(true, STATIC, TILES, 17, "h:LEFT-v:BOTTOM", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
-			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_LEFT, ALIGN_BOTTOM, s_text)
+			ascui_text(true, STATIC, TILES, 17, str("h:LEFT-v:BOTTOM"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
+			ascui_display(true, HOVERABLE, TILES, 1, STRING, str("%s"), &text_ptr_binding, ALIGN_LEFT, ALIGN_BOTTOM, s_text)
 		),
 		ascui_container(true, TILES, 7, VERTICAL, 2,
-			ascui_text(true, STATIC, TILES, 17, "h:MIDDLE-v:BOTTOM", ALIGN_MIDDLE, ALIGN_MIDDLE, s_text),
-			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_MIDDLE, ALIGN_BOTTOM, s_desc)
+			ascui_text(true, STATIC, TILES, 17, str("h:MIDDLE-v:BOTTOM"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_text),
+			ascui_display(true, HOVERABLE, TILES, 1, STRING, str("%s"), &text_ptr_binding, ALIGN_MIDDLE, ALIGN_BOTTOM, s_desc)
 		),
 		ascui_container(true, TILES, 7, VERTICAL, 2,
-			ascui_text(true, STATIC, TILES, 17, "h:RIGHT-v:BOTTOM", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
-			ascui_display(true, HOVERABLE, TILES, 1, &text_ptr, ALIGN_RIGHT, ALIGN_BOTTOM, s_text)
+			ascui_text(true, STATIC, TILES, 17, str("h:RIGHT-v:BOTTOM"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
+			ascui_display(true, HOVERABLE, TILES, 1, STRING, str("%s"), &text_ptr_binding, ALIGN_RIGHT, ALIGN_BOTTOM, s_text)
 		),
 		ascui_divider(s_1)
 	);
 }
 
+bool example_bool = false;
+str_t *example_str;
+var_binding_t str_binding;
+var_binding_t uint_binding = bind_var(0);
+var_binding_t int_binding = bind_var(0);
+var_binding_t float_binding = bind_var(0);
+
+
 void input_example_ui()
 {
+	example_str = str_empty(INPUT_BUF_MAX_LEN);
+	str_binding = bind_var(example_str);
+	
 	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
 	container_style_t s_title = style(1, col8bt(4,0,2), col8bt(2,0,1), col8bt(0,0,0), '-', '|', 'O');
 	container_style_t s_desc = style(0, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
 	container_style_t s_text = style(0, col8bt(4,0,2), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
+	container_style_t s_on = style(0, col8bt(2,0,1), col8bt(4,0,2), col8bt(7,7,3), '-', '|', '+');
+	container_style_t s_off = style(0, col8bt(0,0,0), col8bt(2,0,1), col8bt(7,7,3), ' ', ' ', ' ');
 
-	input_cntr = ascui_box(true, HOVERABLE, PERCENTAGE, 100, HORIZONTAL, s_1, 5,
+	input_cntr = ascui_box(true, HOVERABLE, PERCENTAGE, 100, HORIZONTAL, s_1, 10,
 		ascui_container(true, TILES, 3, VERTICAL, 3,
-			ascui_button(true, HOVERABLE, TILES, 7, "< BACK", ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &main_cntr, NULL),
+			ascui_button(true, HOVERABLE, TILES, 7, str("< BACK"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &main_cntr, NULL),
 			ascui_divider(s_desc),
-			ascui_text(true, STATIC, TILES, 1, "INPUT EXAMPLES", ALIGN_MIDDLE, ALIGN_MIDDLE, s_title)
+			ascui_text(true, STATIC, TILES, 1, str("INPUT EXAMPLES"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_title)
 		),
 		ascui_divider(s_desc),
-		ascui_dropdown_button(TILES, 3, "^ Dropdown test", ALIGN_LEFT, ALIGN_MIDDLE, s_1),
+		ascui_dropdown_button(TILES, 3, str("^ Dropdown test"), ALIGN_LEFT, ALIGN_MIDDLE, s_1),
 		ascui_box(false, HOVERABLE, TILES, 10, HORIZONTAL, s_1, 3,
-			ascui_text(true, STATIC, TILES, 3, "item 1", ALIGN_MIDDLE, ALIGN_MIDDLE, s_title),
-			ascui_text(true, STATIC, TILES, 3, "item 2", ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
-			ascui_text(true, STATIC, TILES, 3, "item 3", ALIGN_MIDDLE, ALIGN_MIDDLE, s_text)
+			ascui_text(true, STATIC, TILES, 3, str("item 1"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_title),
+			ascui_text(true, STATIC, TILES, 3, str("item 2"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
+			ascui_text(true, STATIC, TILES, 3, str("item 3"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_text)
 		),
+		ascui_container(true, TILES, 3, VERTICAL, 2,
+			ascui_toggle(&example_bool, s_on, s_off),
+			ascui_text(true, STATIC, TILES, 1, str("Toggle button"), ALIGN_LEFT, ALIGN_MIDDLE, s_desc)
+		),
+		ascui_input_w_desc(true, TILES, 15, str("uint [0-69]: "), ALIGN_RIGHT, ALIGN_MIDDLE, TILES, 3, s_1, U16_INT, 0, 69, &uint_binding),
+		ascui_input_w_desc(true, TILES, 15, str("int [-69-69]: "), ALIGN_RIGHT, ALIGN_MIDDLE, TILES, 3, s_1, S16_INT, -69, 69, &int_binding),
+		ascui_input_w_desc(true, TILES, 15, str("str [10]: "), ALIGN_RIGHT, ALIGN_MIDDLE, TILES, 3, s_1, STRING, 0, 10, &str_binding),
+		ascui_input_w_desc(true, TILES, 15, str("float [0-1]: "), ALIGN_RIGHT, ALIGN_MIDDLE, TILES, 3, s_1, FLOAT, 0, 1, &float_binding),
 		ascui_divider(s_desc)
 	);
 }
@@ -147,38 +175,9 @@ int main(){
 	long tick = 0;
 
 
-   	int16_t screensize_x = 0;
-	int16_t screensize_y = 0;
-	uint16_t tile_width = 0;
-	char input[50];
- 
-   	printf("Screen width:\n");
-   	fgets(input, sizeof(input), stdin);
-   	screensize_x = atoi(input);
-
-   	if (screensize_x == 0)
-   	{
-   		// Defaults
-   		screensize_x = 1500;
-   		screensize_y = 1000;
-   		tile_width = 25;
-   	}
-   	else
-   	{
-	   	printf("Screen height:\n");
-	   	fgets(input, sizeof(input), stdin);
-	   	screensize_y = atoi(input);
-
-	   	printf("Tile width:\n");
-	   	fgets(input, sizeof(input), stdin);
-	   	tile_width = atoi(input);
-
-		if (screensize_x == 0 || screensize_y == 0 || tile_width == 0)
-		{
-			perror("Invalid inputs");
-			return 0;
-		}	
-   	}
+   	int16_t screensize_x = 1500;
+	int16_t screensize_y = 1000;
+	uint16_t tile_width = 25;
 
     InitWindow(screensize_x, screensize_y, "c_codebase Test Suite");
     Font unscii = LoadFontEx("Resources/Fonts/unscii-8-alt.ttf", 32, 0, 256);
@@ -197,7 +196,7 @@ int main(){
 	main_ui();
 	text_example_ui();
 	input_example_ui();
-	// ascui_get_subgrid_data(subgrid_container)->subgrid = subgrid;
+	// ascui_get_subgrid_data(subgrid_container)->s    %ubgrid = subgrid;
 	cursor_t cursor; 
 	ascui_print_ui(main_cntr);
 	ascui_print_ui(text_cntr);
@@ -208,7 +207,8 @@ int main(){
 	
     while (!WindowShouldClose())
     {
-    	text_ptr = texts[text_index];
+		set_bound_var(&text_ptr_binding, example_strings[text_index_binding.var]);
+    	
     	tick++;
 		frame_time = -GetTime();
 
@@ -271,6 +271,7 @@ int main(){
 
         EndDrawing();
     }
+    free_example_strings();
     UnloadFont(unscii);
     UnloadFont(unscii_fantasy);
     CloseWindow();

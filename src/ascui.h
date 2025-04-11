@@ -36,6 +36,7 @@ typedef enum
 	INPUT,
 	TOGGLE,
 	DISPLAY,
+	SLIDER,
 	DIVIDER
 }container_type_e;
 
@@ -84,8 +85,7 @@ typedef struct
 typedef struct
 {
 	container_style_t style;
-	uint16_t text_len;
-	char *text;
+	str_t *text;
 	uint8_t h_alignment;		// TOP, MIDDLE or BOTTOM
 	uint8_t v_alignment;		// LEFT, RIGHT or MIDDLE
 	uint8_t baked_available_width;
@@ -105,20 +105,41 @@ typedef enum
 	S32_INT,	// 3
 	S16_INT,	// 4
 	S8_INT,		// 5
-	STRING		// 6
-}input_field_type_e;
+	STRING,		// 6
+	FLOAT		// 7
+}parameter_type_e;
+
+typedef struct
+{
+	intptr_t var; // Raw data or pointer
+	bool update_flag;
+}var_binding_t;
+
+#define bind_var(init_value) (var_binding_t) {(intptr_t)init_value, true}
+void _set_bound_var(var_binding_t *binding, intptr_t value);
+#define set_bound_var(binding, value) _set_bound_var(binding, (intptr_t) value)
 
 #define INPUT_BUF_MAX_LEN 64
 typedef struct
 {
-	input_field_type_e type;
+	parameter_type_e type;
 	container_style_t style;
 	int32_t min;				// min length of string or minimum value of digit
 	int32_t max;
 	uint8_t buf_i;
 	char buf[INPUT_BUF_MAX_LEN];
-	void *var;					// variable to be written to
+	var_binding_t *var_binding;		// variable to be written to
 }input_data_t;
+
+typedef struct
+{
+	parameter_type_e type;	// No strings allowed ):<
+	container_style_t style;
+	int32_t min;				// min length of string or minimum value of digit
+	int32_t max;
+	double slide_percentage;
+	var_binding_t *var_binding;	// variable to be written to
+}slider_data_t;
 
 typedef struct
 {
@@ -141,8 +162,7 @@ void ascui_dropdown_button_func(void *dropdown_cntr, void *button_text, cursor_t
 typedef struct
 {
 	bool param_substitution;
-	uint16_t text_len;
-	char *text;
+	str_t *text;
 	uint8_t baked_available_width;
 	uint8_t h_alignment;		// TOP, MIDDLE or BOTTOM
 	uint8_t v_alignment;		// LEFT, RIGHT or MIDDLE
@@ -160,13 +180,13 @@ typedef struct
 	bool *var;
 }toggle_data_t;
 
-
 typedef struct
 {
 	container_style_t style;
-	uint16_t text_len;
-	char *last_text;			// used to check whether text has changed
-	char **text;				// NOT owned by display
+	parameter_type_e display_type;
+	var_binding_t *var_binding;	// Display this variable
+	str_t *fmt;					// ... with this format
+	str_t *display_text;		// ... using this string.
 	uint8_t h_alignment;		// TOP, MIDDLE or BOTTOM
 	uint8_t v_alignment;		// LEFT, RIGHT or MIDDLE
 	uint8_t baked_available_width;
@@ -185,22 +205,26 @@ container_t *ascui_container(bool open, size_type_e s_type, uint8_t size, contai
 container_t *ascui_box(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, container_orientation_e orientation, 
 						container_style_t style, uint16_t n_subcontainers, ...);
 
-container_t *ascui_text(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style);
+container_t *ascui_text(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, str_t *text, uint8_t h_align, uint8_t v_align, container_style_t style);
 
 container_t *ascui_subgrid(bool open, size_type_e s_type, uint8_t size, grid_t *subgrid);
 
-container_t *ascui_button(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
+container_t *ascui_button(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, str_t *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
 						  UI_side_effect_func side_effect_func, void *domain, void *function_data);
 
-container_t *ascui_button_subst(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
+container_t *ascui_button_subst(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, str_t *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
 						  UI_side_effect_func side_effect_func, void *domain, void *function_data);
 
 container_t *ascui_input(bool open, size_type_e s_type, uint8_t size, container_style_t style, 
-						  input_field_type_e input_type, int32_t min, int32_t max, void *var);
+						  parameter_type_e input_type, int32_t min, int32_t max, var_binding_t *var_binding);
+
+container_t *ascui_slider(bool open, size_type_e s_type, uint8_t size, container_style_t style, 
+						  parameter_type_e input_type, int32_t min, int32_t max, var_binding_t *var_binding);
 						  
 container_t *ascui_toggle(bool *var, container_style_t style_on, container_style_t style_off);
 
-container_t *ascui_display(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, char **text, uint8_t h_align, uint8_t v_align, container_style_t style);
+container_t *ascui_display(bool open, uint8_t selectability, size_type_e s_type, uint8_t size,parameter_type_e display_type, str_t *fmt, var_binding_t *var_binding, 
+							uint8_t h_align, uint8_t v_align, container_style_t style);
 
 container_t *ascui_divider(container_style_t style);
 
@@ -209,9 +233,9 @@ container_t *ascui_divider(container_style_t style);
 
 
 // Composites
-container_t *ascui_input_w_desc(bool open, size_type_e txt_s_type, uint8_t txt_size, char *text, uint8_t h_align, uint8_t v_align,
+container_t *ascui_input_w_desc(bool open, size_type_e txt_s_type, uint8_t txt_size, str_t *text, uint8_t h_align, uint8_t v_align,
 								size_type_e input_s_type, uint8_t input_size, container_style_t style, 
-						  		input_field_type_e input_type, int32_t min, int32_t max, void *var);
+						  		parameter_type_e input_type, int32_t min, int32_t max, var_binding_t *var_binding);
 
 ///// TOP LEVEL FUNCTIONS
 
@@ -242,6 +266,10 @@ text_data_t *ascui_get_text_data(container_t *container);
 subgrid_data_t *ascui_get_subgrid_data(container_t *container);
 
 button_data_t *ascui_get_button_data(container_t *container);
+
+input_data_t *ascui_get_input_data(container_t *container);
+
+slider_data_t *ascui_get_slider_data(container_t *container);
 
 toggle_data_t *ascui_get_toggle_data(container_t *container);
 

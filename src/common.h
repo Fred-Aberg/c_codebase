@@ -35,6 +35,11 @@ int16_t max(int16_t a, int16_t b);
 
 int16_t clamp(int16_t minv, int16_t x, int16_t maxv);
 
+float flmin(float a, float b);
+
+float flmax(float a, float b);
+
+float flclamp(float minv, float x, float maxv);
 
 /// ARRAYS
 
@@ -120,7 +125,6 @@ typedef struct
     uint32_t capacity;
     bool ordered;
 	bool duplicates_allowed;
-
 } ui32_list_t;
 
 uint32_t ui32_list_get(ui32_list_t list, uint32_t index);
@@ -128,3 +132,84 @@ void ui32_list_add(ui32_list_t *list, uint32_t value);
 void ui32_list_remove(ui32_list_t *list, uint32_t index);
 
 void free_list(void *list);
+
+/// STRINGS
+
+// Always owns its own array of chars
+// A string's length shall always include a null-terminator 
+//		=> (&str->c)[length - 1] = '\0', (&str->c)[length] => illegal access.
+
+// A string's length is never 0, the smallest string is "" with length: 1 
+	//	ex. str 	|	length	|	array
+	//		""		|	1		|	{'\0'}
+	//		"a"		|	2 		|	{'a','\0'}
+	//		"abc"	|	4		|	{'a', 'b', 'c', '\0'}
+ 
+typedef struct
+{
+	uint32_t length;
+	uint32_t capacity;
+	char c;
+}str_t;
+
+// Never owns its own array of chars
+typedef struct
+{
+	uint32_t start_index;
+	uint32_t end_index;
+	str_t *str;
+}str_slice_t;
+
+/// String functions ///
+// new allocations should be returned
+
+#define slice(str, start, end) (str_slice_t) {start, end, str}
+#define str_ref(str) (str_slice_t) {0, str->length, str}
+
+// Reads the i:th char of str
+//	Pre:	0 <= i <= (length - 1)
+char str_get(str_t *str, uint32_t i);
+
+// Writes to the i:th char of str
+//	Pre:	0 <= i < (length - 1)		You cannot write to the null character
+void str_set(str_t *str, uint32_t i, char c);
+
+void str_append(str_t **str, char c);
+
+str_t *str_realloc(str_t **str, uint32_t new_capacity);
+
+// return char *ptr from str
+char *str_charr(str_t *str);
+
+str_t *str_empty(uint32_t init_capacity);
+
+str_t *str_from_char_ptr(char *src, uint32_t length);
+	// ex: 	str_t *new_str = str_from_char_ptr(src, strlen(src));
+
+#define str(literal) str_from_char_ptr(literal, sizeof(literal))
+	// ex:	str_t *new_str = str("abc");
+
+str_t *str_copy(str_t *src);
+	
+str_t *str_from_buf(char *buf, uint32_t buf_max_size);
+	// ex: 	char buf[256];								: buffer *theoretically* large enough to hold sprintf output
+	//	 	sprintf(buf, fmt, vars);			
+	//	 	str_t *new_str = str_from_buf(buf, 256);	: will throw an error if buf isn't nulled (which implies overflow)
+
+
+void str_write_from_buf(str_t **dest, char *buf, uint32_t buf_max_size);
+	// ex: 	char buf[256];								: buffer *theoretically* large enough to hold sprintf output
+	//	 	sprintf(buf, fmt, vars);			
+	//	 	str_write_from_buf(str, buf, 256);			: will throw an error if buf isn't nulled (which implies overflow)
+	
+#define str_write_from_sprintf(buf_max_size, dest, fmt, ...)		\
+	{char buf[buf_max_size];										\
+	buf[buf_max_size - 1] = 0;										\
+	sprintf(buf, str_charr(fmt), __VA_ARGS__);									\
+	str_write_from_buf(dest, buf, buf_max_size);}
+
+void str_write_from_char_ptr(str_t **dest, char *src, uint32_t length);
+
+void str_write_from_str(str_t **dest, str_t *src);
+
+#define str_write(str, literal) str_write_from_char_ptr(str, literal, sizeof(literal))

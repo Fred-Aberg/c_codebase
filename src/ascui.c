@@ -11,6 +11,61 @@
 #define INLINE_COLOR '\a'
 #define INLINE_FONT '\b'
 
+
+context_t *ascui_context(uint16_t binding_capacity, container_t *top_container)
+{
+	context_t *ctx = calloc(1, sizeof(context_t));
+	ctx->top_container = top_container;
+	ctx->binding_capacity = binding_capacity; 
+
+	ctx->var_bindings = calloc(binding_capacity, sizeof(var_binding_t)); 
+
+	// Mark all bindings as unused
+	for (uint16_t i = 0; i < ctx->binding_capacity; i++)
+		ctx->var_bindings[i].update_flag = -1;
+
+	return ctx;
+}
+
+// Save the returned address for use in your program
+var_binding_t *ascui_add_context_var_binding(context_t *ctx, intptr_t init_val)
+{
+	for (uint16_t i = 0; i < ctx->binding_capacity; i++)
+		if(ctx->var_bindings[i].update_flag == -1)
+		{
+			ctx->var_bindings[i].var = init_val;
+			ctx->var_bindings[i].update_flag = 2;
+			return &ctx->var_bindings[i];
+		}
+
+	ERROR("\nascui_add_context_var_binding: capacity already reached!")
+}
+var_binding_t *ascui_add_context_var_binding_float(context_t *ctx, float init_val)
+{
+	for (uint16_t i = 0; i < ctx->binding_capacity; i++)
+		if(ctx->var_bindings[i].update_flag == -1)
+		{
+			memcpy(&ctx->var_bindings[i].var, &init_val, sizeof(float));
+			ctx->var_bindings[i].update_flag = 2;
+			return &ctx->var_bindings[i];
+		}
+
+	ERROR("\nascui_add_context_var_binding_float: capacity already reached!")
+}
+
+// Supply a saved address to remove
+void ascui_retire_var_binding(var_binding_t *var_binding)
+{
+	var_binding->var = 0;
+	var_binding->update_flag = -1;
+}
+
+void _set_bound_var(var_binding_t *binding, intptr_t value)
+{
+	binding->var = value;
+	binding->update_flag = 2;
+}
+
 static container_t *create_container_stub(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, container_type_e c_type)
 {
 	container_t	*container = calloc(1, sizeof(container_t));
@@ -186,11 +241,13 @@ container_t *ascui_input(bool open, size_type_e s_type, uint8_t size, container_
 container_t *ascui_slider(bool open, size_type_e s_type, uint8_t size, container_style_t style, 
 						  parameter_type_e input_type, int32_t min, int32_t max, var_binding_t *var_binding)
 {
- 	container_t *container = create_container_stub(open, SELECTABLE, s_type, size, SLIDER);
+ 	container_t *container = create_container_stub(open, HOVERABLE, s_type, size, SLIDER);
 	container->container_type_data = calloc(1, sizeof(slider_data_t));
 	ascui_get_slider_data(container)->style = style;
-
 	ascui_get_slider_data(container)->type = input_type;
+	if(input_type == STRING)
+		ERROR("\nascui_slider: input_type = STRING is illegal!")
+
 	ascui_get_slider_data(container)->min = min;
 	ascui_get_slider_data(container)->max = max;
 	ascui_get_slider_data(container)->var_binding = var_binding;
@@ -207,12 +264,6 @@ container_t *ascui_toggle(bool *var, container_style_t style_on, container_style
 	ascui_get_toggle_data(container)->var = var;
 
 	return container;
-}
-
-void _set_bound_var(var_binding_t *binding, intptr_t value)
-{
-	binding->var = value;
-	binding->update_flag = true;
 }
 
 container_t *ascui_display(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, parameter_type_e display_type, str_t *fmt, var_binding_t *var_binding, 
@@ -311,10 +362,11 @@ static void _print_ui(container_t *container, uint16_t indentation, bool last_ch
 		case SUBGRID: 	printf("[SUBGRID]"); 	line_len += strlen("[SUBGRID]"); 	break;
 		case BUTTON:	printf("[BUTTON]");		line_len += strlen("[BUTTON]"); 	break;
 		case INPUT: 	printf("[INPUT]");		line_len += strlen("[INPUT]"); 		break;
+		case SLIDER: 	printf("[SLIDER]");		line_len += strlen("[SLIDER]"); 	break;
 		case TOGGLE: 	printf("[TOGGLE]"); 	line_len += strlen("[TOGGLE]"); 	break;
 		case DISPLAY: 	printf("[DISPLAY]");	line_len += strlen("[DISPLAY]"); 	break;
 		case DIVIDER: 	printf("[DIVIDER]"); 	line_len += strlen("[DIVIDER]");	break;
-		default: 		puts("[?]"); 			line_len += strlen("[?]"); 			break;
+		default: 		printf("[?]"); 			line_len += strlen("[?]"); 			break;
 	}
 
 	uint16_t n_subcontainers;
@@ -854,7 +906,7 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 					case S16_INT:  	set_bound_var(input_data->var_binding, clamp(input_data->min, atoi(input_data->buf), input_data->max));					break;
 					case S8_INT: 	set_bound_var(input_data->var_binding, clamp(input_data->min, atoi(input_data->buf), input_data->max)); 				break;
 					case FLOAT: 	float f = flclamp(input_data->min, strtof(input_data->buf, &end_ptr), input_data->max);
-									memcpy(&input_data->var_binding->var, &f, sizeof(float));																break;
+									memcpy(&input_data->var_binding->var, &f, sizeof(float)); input_data->var_binding->update_flag = 2;					break;
 					case STRING: 	str_write_from_buf((str_t **)(&input_data->var_binding->var), input_data->buf, INPUT_BUF_MAX_LEN); 
 									input_data->var_binding->update_flag = true; 																			break;
 					default:		 																														break;
@@ -884,8 +936,6 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 		{
 			if(input_data->var_binding->update_flag)
 			{
-				input_data->var_binding->update_flag = false;
-
 				input_data->buf[INPUT_BUF_MAX_LEN] = 0;	// Setup buffer overflow detection
 				switch (input_data->type)
 				{
@@ -940,13 +990,13 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 			d_data->baked_available_width = 0;
 			switch (d_data->display_type)
 			{
-				case U32_INT: 	str_write_from_sprintf(12, &d_data->display_text, d_data->fmt, (uint32_t)d_data->var_binding->var);							break;
-				case U16_INT: 	str_write_from_sprintf(12, &d_data->display_text, d_data->fmt, (uint16_t)d_data->var_binding->var); 						break;
-				case U8_INT: 	str_write_from_sprintf(12, &d_data->display_text, d_data->fmt, (uint8_t)d_data->var_binding->var); 							break;
-				case S32_INT: 	str_write_from_sprintf(12, &d_data->display_text, d_data->fmt, (int32_t)d_data->var_binding->var);							break;
-				case S16_INT: 	str_write_from_sprintf(12, &d_data->display_text, d_data->fmt, (int16_t)d_data->var_binding->var); 							break;
-				case S8_INT: 	str_write_from_sprintf(12, &d_data->display_text, d_data->fmt, (int8_t)d_data->var_binding->var); 							break;
-				case FLOAT: 	str_write_from_sprintf(12, &d_data->display_text, d_data->fmt, (float)d_data->var_binding->var); 							break;
+				case U32_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, (uint32_t)d_data->var_binding->var);	break;
+				case U16_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, (uint16_t)d_data->var_binding->var); 	break;
+				case U8_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, (uint8_t)d_data->var_binding->var); 	break;
+				case S32_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, (int32_t)d_data->var_binding->var);	break;
+				case S16_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, (int16_t)d_data->var_binding->var); 	break;
+				case S8_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, (int8_t)d_data->var_binding->var); 	break;
+				case FLOAT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, (float)d_data->var_binding->var); 		break;
 				case STRING: 	str_write_from_str(&d_data->display_text, (str_t *)d_data->var_binding->var);												break;
 				default: 		str_write(&d_data->display_text, "???"); 																					break;
 			}
@@ -976,6 +1026,60 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 		}
 
 		return 1;
+	}
+	else if(c_type == SLIDER)
+	{
+		slider_data_t *sl_data = ascui_get_slider_data(container);
+		
+		color8b_t bg_col;
+		color8b_t smbl_col;
+		uint8_t vertical_midpoint = y0 + (y1 - y0) / 2;
+		if(hovered || selected)
+		{
+			bg_col = sl_data->style.char_col;
+			smbl_col = sl_data->style.bg_col;
+		}
+		else
+		{
+			bg_col = sl_data->style.bg_col;
+			smbl_col = sl_data->style.char_col;
+		}
+
+		tl_draw_rect_bg(grid, x0, y0, x1, y1, bg_col);
+
+		void *ptr = sl_data->slide_percentage;
+		
+		if(sl_data->var_binding->update_flag) // TODO: var_binding->var is always a (double) ?
+		{
+			sl_data->slide_percentage = ((double)sl_data->var_binding->var - sl_data->min) / abs(sl_data->max - sl_data->min);
+		}
+
+		if(hovered && cursor->left_button_pressed)
+		{
+			sl_data->slide_percentage = (double)(cursor->x - x0) / (double)(x1 - x0);
+
+			double val = abs(sl_data->max - sl_data->min) * sl_data->slide_percentage;
+			val += sl_data->min;
+			
+			switch (sl_data->type)
+			{
+				case U32_INT:  	set_bound_var(sl_data->var_binding, clamp(sl_data->min, val, sl_data->max)); 	break;
+				case U16_INT:  	set_bound_var(sl_data->var_binding, clamp(sl_data->min, val, sl_data->max)); 	break;
+				case U8_INT: 	set_bound_var(sl_data->var_binding, clamp(sl_data->min, val, sl_data->max)); 	break;
+				case S32_INT:  	set_bound_var(sl_data->var_binding, clamp(sl_data->min, val, sl_data->max)); 	break;
+				case S16_INT:  	set_bound_var(sl_data->var_binding, clamp(sl_data->min, val, sl_data->max));	break;
+				case S8_INT: 	set_bound_var(sl_data->var_binding, clamp(sl_data->min, val, sl_data->max)); 	break;
+				case FLOAT: 	float f = flclamp(sl_data->min, val, sl_data->max);
+								memcpy(&sl_data->var_binding->var, &f, sizeof(float));	sl_data->var_binding->update_flag = 2;				break;
+				default:		 																											break;
+			}
+		}
+		uint8_t knob_x = x0 + (x1 - x0) * sl_data->slide_percentage;
+
+		tl_draw_line_bg(grid, x0, vertical_midpoint, x1, vertical_midpoint, smbl_col);
+		tl_draw_line_bg(grid, knob_x, y0, knob_x, y1, sl_data->style.border_col);
+		
+		return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
 	}
 
 	return 0;
@@ -1082,11 +1186,15 @@ void ascui_adapt_grid_to_screen(grid_t *grid, int zoom_in_key, int zoom_out_key)
 		}
 }
 
-void ascui_run_ui(grid_t *grid, container_t *top_container, double *ascui_drawing_time, Sound *click_sound, Sound *scroll_sound, 
+void ascui_run_ui(grid_t *grid, context_t *ctx, double *ascui_drawing_time, Sound *click_sound, Sound *scroll_sound,
 						int zoom_in_key, int zoom_out_key, cursor_t *cursor)
 {
+	for (uint16_t i = 0; i < ctx->binding_capacity; i++)
+		if(ctx->var_bindings[i].update_flag > 0)
+			ctx->var_bindings[i].update_flag--;
+
 	ascui_update_cursor(grid, cursor);
-	ascui_navigate_ui(grid, top_container, cursor, ascui_drawing_time, click_sound, scroll_sound);
+	ascui_navigate_ui(grid, ctx->top_container, cursor, ascui_drawing_time, click_sound, scroll_sound);
 	ascui_adapt_grid_to_screen(grid, zoom_in_key, zoom_out_key);
 }
 

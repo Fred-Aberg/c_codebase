@@ -112,7 +112,7 @@ typedef enum
 typedef struct
 {
 	intptr_t var; // Raw data or pointer
-	bool update_flag;
+	int8_t update_flag;
 }var_binding_t;
 
 #define bind_var(init_value) (var_binding_t) {(intptr_t)init_value, true}
@@ -198,7 +198,25 @@ typedef struct
 	container_style_t style;
 }divider_data_t;
 
+typedef struct
+{
+	container_t *top_container;
+	uint16_t binding_capacity;
+	var_binding_t *var_bindings;
+}context_t;
+
 ///// UI CONSTRUCTION
+
+context_t *ascui_context(uint16_t binding_capacity, container_t *top_container);
+
+// Save the returned address for use in your program
+var_binding_t *ascui_add_context_var_binding(context_t *ctx, intptr_t init_val);
+var_binding_t *ascui_add_context_var_binding_float(context_t *ctx, float init_val);
+
+// Supply a saved address to remove
+void ascui_retire_var_binding(var_binding_t *var_binding);
+
+/// Containers
 
 container_t *ascui_container(bool open, size_type_e s_type, uint8_t size, container_orientation_e orientation, uint16_t n_subcontainers, ...);
 
@@ -252,7 +270,7 @@ void ascui_navigate_ui(grid_t *grid, container_t *top_container, cursor_t *curso
 void ascui_adapt_grid_to_screen(grid_t *grid, int screensize_x, int zoom_out_key);
 
 // Composite of all top lvl functions in order
-void ascui_run_ui(grid_t *grid, container_t *top_container, double *ascui_drawing_time, Sound *click_sound, Sound *scroll_sound,
+void ascui_run_ui(grid_t *grid, context_t *ctx, double *ascui_drawing_time, Sound *click_sound, Sound *scroll_sound,
 						int zoom_in_key, int zoom_out_key, cursor_t *cursor);
 
 ///// CONTAINER DATA FETCHING

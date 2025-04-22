@@ -1,4 +1,4 @@
-#include <assert.h>
+ #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -28,29 +28,18 @@ context_t *ascui_context(uint16_t binding_capacity, container_t *top_container)
 }
 
 // Save the returned address for use in your program
-var_binding_t *ascui_add_context_var_binding(context_t *ctx, intptr_t init_val)
+var_binding_t *ascui_add_context_var_binding(context_t *ctx, void *ptr, parameter_type_e var_type)
 {
 	for (uint16_t i = 0; i < ctx->binding_capacity; i++)
 		if(ctx->var_bindings[i].update_flag == -1)
 		{
-			ctx->var_bindings[i].var = init_val;
+			ctx->var_bindings[i].var = ptr;
 			ctx->var_bindings[i].update_flag = 2;
+			ctx->var_bindings[i].var_type = var_type;
 			return &ctx->var_bindings[i];
 		}
 
 	ERROR("\nascui_add_context_var_binding: capacity already reached!")
-}
-var_binding_t *ascui_add_context_var_binding_float(context_t *ctx, float init_val)
-{
-	for (uint16_t i = 0; i < ctx->binding_capacity; i++)
-		if(ctx->var_bindings[i].update_flag == -1)
-		{
-			memcpy(&ctx->var_bindings[i].var, &init_val, sizeof(float));
-			ctx->var_bindings[i].update_flag = 2;
-			return &ctx->var_bindings[i];
-		}
-
-	ERROR("\nascui_add_context_var_binding_float: capacity already reached!")
 }
 
 // Supply a saved address to remove
@@ -60,9 +49,8 @@ void ascui_retire_var_binding(var_binding_t *var_binding)
 	var_binding->update_flag = -1;
 }
 
-void _set_bound_var(var_binding_t *binding, intptr_t value)
+void flag_bound_var(var_binding_t *binding)
 {
-	binding->var = value;
 	binding->update_flag = 2;
 }
 
@@ -224,13 +212,12 @@ container_t *ascui_button_subst(bool open, uint8_t selectability, size_type_e s_
 }
 						  
 container_t *ascui_input(bool open, size_type_e s_type, uint8_t size, container_style_t style, 
-						  parameter_type_e input_type, int32_t min, int32_t max, var_binding_t *var_binding)
+						  int32_t min, int32_t max, var_binding_t *var_binding)
 {
  	container_t *container = create_container_stub(open, SELECTABLE, s_type, size, INPUT);
 	container->container_type_data = calloc(1, sizeof(input_data_t));
 	ascui_get_input_data(container)->style = style;
 
-	ascui_get_input_data(container)->type = input_type;
 	ascui_get_input_data(container)->min = min;
 	ascui_get_input_data(container)->max = max;
 	ascui_get_input_data(container)->var_binding = var_binding;
@@ -239,13 +226,12 @@ container_t *ascui_input(bool open, size_type_e s_type, uint8_t size, container_
 }
 
 container_t *ascui_slider(bool open, size_type_e s_type, uint8_t size, container_style_t style, 
-						  parameter_type_e input_type, int32_t min, int32_t max, var_binding_t *var_binding)
+						  int32_t min, int32_t max, var_binding_t *var_binding)
 {
  	container_t *container = create_container_stub(open, HOVERABLE, s_type, size, SLIDER);
 	container->container_type_data = calloc(1, sizeof(slider_data_t));
 	ascui_get_slider_data(container)->style = style;
-	ascui_get_slider_data(container)->type = input_type;
-	if(input_type == STRING)
+	if(var_binding->var_type == STRING)
 		ERROR("\nascui_slider: input_type = STRING is illegal!")
 
 	ascui_get_slider_data(container)->min = min;
@@ -266,13 +252,12 @@ container_t *ascui_toggle(bool *var, container_style_t style_on, container_style
 	return container;
 }
 
-container_t *ascui_display(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, parameter_type_e display_type, str_t *fmt, var_binding_t *var_binding, 
+container_t *ascui_display(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, str_t *fmt, var_binding_t *var_binding, 
 							uint8_t h_align, uint8_t v_align, container_style_t style)
 {
 	container_t *container = create_container_stub(open, selectability, s_type, size, DISPLAY);
 	container->container_type_data = calloc(1, sizeof(display_data_t));
 	ascui_get_display_data(container)->style = style;
-	ascui_get_display_data(container)->display_type = display_type;
 	ascui_get_display_data(container)->fmt = fmt;
 	ascui_get_display_data(container)->var_binding = var_binding;
 	ascui_get_display_data(container)->baked_available_width = 0;
@@ -297,11 +282,11 @@ container_t *ascui_divider(container_style_t style)
 
 container_t *ascui_input_w_desc(bool open, size_type_e txt_s_type, uint8_t txt_size, str_t *text, uint8_t h_align, uint8_t v_align,
 								size_type_e input_s_type, uint8_t input_size, container_style_t style, 
-						  		parameter_type_e input_type, int32_t min, int32_t max, var_binding_t *var_binding)
+						  		int32_t min, int32_t max, var_binding_t *var_binding)
 {
 	container_t *input_field_carrier = ascui_container(open, input_s_type, input_size, VERTICAL, 2,
 		ascui_text(true, STATIC, txt_s_type, txt_size, text, h_align, v_align, style),
-		ascui_input(true, TILES, 1, style, input_type, min, max, var_binding)
+		ascui_input(true, TILES, 1, style, min, max, var_binding)
 	);
 
 	return input_field_carrier;
@@ -890,27 +875,26 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 
 			if (k == KEY_ENTER)
 			{
-				if(input_data->type == STRING)
+				if(input_data->var_binding->var_type == STRING)
 					input_data->buf[min(input_data->max, input_data->buf_i)] = '\0'; // Cut off string at max, or input length
 				else
 					input_data->buf[input_data->buf_i] = '\0'; // Cut off at end of input
 
 				char *end_ptr = &input_data->buf[input_data->buf_i];
 					
-				switch (input_data->type)
+				switch (input_data->var_binding->var_type)
 				{
-					case U32_INT:  	set_bound_var(input_data->var_binding, clamp(input_data->min, atol(input_data->buf), input_data->max)); 				break;
-					case U16_INT:  	set_bound_var(input_data->var_binding, clamp(input_data->min, atoi(input_data->buf), input_data->max)); 				break;
-					case U8_INT: 	set_bound_var(input_data->var_binding, clamp(input_data->min, atoi(input_data->buf), input_data->max)); 				break;
-					case S32_INT:  	set_bound_var(input_data->var_binding, clamp(input_data->min, atol(input_data->buf), input_data->max)); 				break;
-					case S16_INT:  	set_bound_var(input_data->var_binding, clamp(input_data->min, atoi(input_data->buf), input_data->max));					break;
-					case S8_INT: 	set_bound_var(input_data->var_binding, clamp(input_data->min, atoi(input_data->buf), input_data->max)); 				break;
-					case FLOAT: 	float f = flclamp(input_data->min, strtof(input_data->buf, &end_ptr), input_data->max);
-									memcpy(&input_data->var_binding->var, &f, sizeof(float)); input_data->var_binding->update_flag = 2;					break;
-					case STRING: 	str_write_from_buf((str_t **)(&input_data->var_binding->var), input_data->buf, INPUT_BUF_MAX_LEN); 
-									input_data->var_binding->update_flag = true; 																			break;
+					case U32_INT:  	*(uint32_t *)(input_data->var_binding->var) = clamp(input_data->min, atol(input_data->buf), input_data->max); 			break;			
+					case U16_INT:  	*(uint16_t *)(input_data->var_binding->var) = clamp(input_data->min, atoi(input_data->buf), input_data->max); 			break;
+					case U8_INT: 	*(uint8_t *)(input_data->var_binding->var) = clamp(input_data->min, atoi(input_data->buf), input_data->max); 			break;
+					case S32_INT:  	*(int32_t *)(input_data->var_binding->var) = clamp(input_data->min, atol(input_data->buf), input_data->max); 			break;
+					case S16_INT:  	*(int16_t *)(input_data->var_binding->var) = clamp(input_data->min, atoi(input_data->buf), input_data->max);			break;	
+					case S8_INT: 	*(int8_t *)(input_data->var_binding->var) = clamp(input_data->min, atoi(input_data->buf), input_data->max); 			break;	
+					case FLOAT:		*(float *)(input_data->var_binding->var) = flclamp(input_data->min, strtof(input_data->buf, &end_ptr), input_data->max);break;			
+					case STRING: 	str_write_from_buf((str_t **)(&input_data->var_binding->var), input_data->buf, INPUT_BUF_MAX_LEN); 						break;
 					default:		 																														break;
 				}
+				flag_bound_var(input_data->var_binding);
 				cursor->selected_container = NULL; // Deselect after ENTER
 			}
 			else if(k == KEY_BACKSPACE && input_data->buf_i > 0)
@@ -937,16 +921,16 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 			if(input_data->var_binding->update_flag)
 			{
 				input_data->buf[INPUT_BUF_MAX_LEN] = 0;	// Setup buffer overflow detection
-				switch (input_data->type)
+				switch (input_data->var_binding->var_type)
 				{
-					case U32_INT: 	sprintf(input_data->buf, "%u", (uint32_t)input_data->var_binding->var); 			break;
-					case U16_INT: 	sprintf(input_data->buf, "%u", (uint16_t)input_data->var_binding->var); 			break;
-					case U8_INT: 	sprintf(input_data->buf, "%u", (uint8_t)input_data->var_binding->var); 				break;
-					case S32_INT: 	sprintf(input_data->buf, "%d", (int32_t)input_data->var_binding->var); 				break;
-					case S16_INT: 	sprintf(input_data->buf, "%d", (int16_t)input_data->var_binding->var);				break;
-					case S8_INT: 	sprintf(input_data->buf, "%d", (int8_t)input_data->var_binding->var); 				break;
+					case U32_INT: 	sprintf(input_data->buf, "%u", *(uint32_t *)input_data->var_binding->var); 			break;
+					case U16_INT: 	sprintf(input_data->buf, "%u", *(uint16_t *)input_data->var_binding->var); 			break;
+					case U8_INT: 	sprintf(input_data->buf, "%u", *(uint8_t *)input_data->var_binding->var); 			break;
+					case S32_INT: 	sprintf(input_data->buf, "%d", *(int32_t *)input_data->var_binding->var); 			break;
+					case S16_INT: 	sprintf(input_data->buf, "%d", *(int16_t *)input_data->var_binding->var);			break;
+					case S8_INT: 	sprintf(input_data->buf, "%d", *(int8_t *)input_data->var_binding->var); 			break;
 					case STRING: 	sprintf(input_data->buf, "%s", str_charr((str_t *)input_data->var_binding->var)); 	break;
-					case FLOAT: 	sprintf(input_data->buf, "%f", (float)input_data->var_binding->var); 				break;
+					case FLOAT: 	sprintf(input_data->buf, "%f", *(float *)input_data->var_binding->var); 			break;
 					default: 		sprintf(input_data->buf, "???"); 													break;
 				}
 				if(input_data->buf[INPUT_BUF_MAX_LEN] != 0)	// Check buffer overflow
@@ -988,17 +972,17 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 		if(d_data->var_binding->update_flag)	// Reconstruct buf and signal rebake of lines if var is updated
 		{
 			d_data->baked_available_width = 0;
-			switch (d_data->display_type)
+			switch (d_data->var_binding->var_type)
 			{
-				case U32_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, (uint32_t)d_data->var_binding->var);	break;
-				case U16_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, (uint16_t)d_data->var_binding->var); 	break;
-				case U8_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, (uint8_t)d_data->var_binding->var); 	break;
-				case S32_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, (int32_t)d_data->var_binding->var);	break;
-				case S16_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, (int16_t)d_data->var_binding->var); 	break;
-				case S8_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, (int8_t)d_data->var_binding->var); 	break;
-				case FLOAT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, (float)d_data->var_binding->var); 		break;
-				case STRING: 	str_write_from_str(&d_data->display_text, (str_t *)d_data->var_binding->var);												break;
-				default: 		str_write(&d_data->display_text, "???"); 																					break;
+				case U32_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, *(uint32_t *)d_data->var_binding->var);	break;
+				case U16_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, *(uint16_t *)d_data->var_binding->var); 	break;
+				case U8_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, *(uint8_t *)d_data->var_binding->var); 	break;
+				case S32_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, *(int32_t *)d_data->var_binding->var);		break;
+				case S16_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, *(int16_t *)d_data->var_binding->var); 	break;
+				case S8_INT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, *(int8_t *)d_data->var_binding->var); 		break;
+				case FLOAT: 	str_write_from_sprintf(d_data->fmt->length + 20, &d_data->display_text, d_data->fmt, *(float *)d_data->var_binding->var); 		break;
+				case STRING: 	str_write_from_str(&d_data->display_text, (str_t *)d_data->var_binding->var);													break;
+				default: 		str_write(&d_data->display_text, "???"); 																						break;
 			}
 		}
 
@@ -1047,32 +1031,42 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 
 		tl_draw_rect_bg(grid, x0, y0, x1, y1, bg_col);
 
-		void *ptr = sl_data->slide_percentage;
-		
-		if(sl_data->var_binding->update_flag) // TODO: var_binding->var is always a (double) ?
+		// variable updated from elsewhere
+		if(sl_data->var_binding->update_flag)
 		{
-			sl_data->slide_percentage = ((double)sl_data->var_binding->var - sl_data->min) / abs(sl_data->max - sl_data->min);
+			switch (sl_data->var_binding->var_type)
+			{
+				case U32_INT:  	sl_data->slide_percentage = (double)(*(uint32_t *)sl_data->var_binding->var - sl_data->min) / (abs(sl_data->max - sl_data->min)); 	break;
+				case U16_INT:  	sl_data->slide_percentage = (double)(*(uint16_t*)sl_data->var_binding->var - sl_data->min) / (abs(sl_data->max - sl_data->min)); 	break;
+				case U8_INT: 	sl_data->slide_percentage = (double)(*(uint8_t*)sl_data->var_binding->var - sl_data->min) / abs(sl_data->max - sl_data->min); 	break;
+				case S32_INT:  	sl_data->slide_percentage = (double)(*(int32_t*)sl_data->var_binding->var - sl_data->min) / (abs(sl_data->max - sl_data->min)); 	break;
+				case S16_INT:  	sl_data->slide_percentage = (double)(*(int16_t*)sl_data->var_binding->var - sl_data->min) / (abs(sl_data->max - sl_data->min));		break;
+				case S8_INT: 	sl_data->slide_percentage = (double)(*(int8_t*)sl_data->var_binding->var - sl_data->min) / (abs(sl_data->max - sl_data->min)); 		break;
+				case FLOAT: 	sl_data->slide_percentage = (double)(*(float *)sl_data->var_binding->var - sl_data->min) / (abs(sl_data->max - sl_data->min));		break;
+				default:		 																															break;
+			}
 		}
 
-		if(hovered && cursor->left_button_pressed)
+		// variable updated from UI
+		if(hovered && IsMouseButtonDown(MOUSE_BUTTON_LEFT))
 		{
 			sl_data->slide_percentage = (double)(cursor->x - x0) / (double)(x1 - x0);
 
-			double val = abs(sl_data->max - sl_data->min) * sl_data->slide_percentage;
+			float val = abs(sl_data->max - sl_data->min) * sl_data->slide_percentage;	// Calculate at a high precision (float), downgrade later...
 			val += sl_data->min;
 			
-			switch (sl_data->type)
+			switch (sl_data->var_binding->var_type)
 			{
-				case U32_INT:  	set_bound_var(sl_data->var_binding, clamp(sl_data->min, val, sl_data->max)); 	break;
-				case U16_INT:  	set_bound_var(sl_data->var_binding, clamp(sl_data->min, val, sl_data->max)); 	break;
-				case U8_INT: 	set_bound_var(sl_data->var_binding, clamp(sl_data->min, val, sl_data->max)); 	break;
-				case S32_INT:  	set_bound_var(sl_data->var_binding, clamp(sl_data->min, val, sl_data->max)); 	break;
-				case S16_INT:  	set_bound_var(sl_data->var_binding, clamp(sl_data->min, val, sl_data->max));	break;
-				case S8_INT: 	set_bound_var(sl_data->var_binding, clamp(sl_data->min, val, sl_data->max)); 	break;
-				case FLOAT: 	float f = flclamp(sl_data->min, val, sl_data->max);
-								memcpy(&sl_data->var_binding->var, &f, sizeof(float));	sl_data->var_binding->update_flag = 2;				break;
-				default:		 																											break;
+				case U32_INT:  	*(uint32_t *)(sl_data->var_binding->var) = clamp(sl_data->min, val, sl_data->max); 	break;			
+				case U16_INT:  	*(uint16_t *)(sl_data->var_binding->var) = clamp(sl_data->min, val, sl_data->max); 	break;
+				case U8_INT: 	*(uint8_t *)(sl_data->var_binding->var) = clamp(sl_data->min, val, sl_data->max); 	break;
+				case S32_INT:  	*(int32_t *)(sl_data->var_binding->var) = clamp(sl_data->min, val, sl_data->max); 	break;
+				case S16_INT:  	*(int16_t *)(sl_data->var_binding->var) = clamp(sl_data->min, val, sl_data->max);	break;	
+				case S8_INT: 	*(int8_t *)(sl_data->var_binding->var) = clamp(sl_data->min, val, sl_data->max); 	break;	
+				case FLOAT:		*(float *)(sl_data->var_binding->var) = flclamp(sl_data->min, val, sl_data->max);	break;			
+				default:		 																					break;
 			}
+			flag_bound_var(sl_data->var_binding);
 		}
 		uint8_t knob_x = x0 + (x1 - x0) * sl_data->slide_percentage;
 

@@ -111,18 +111,18 @@ typedef enum
 
 typedef struct
 {
-	intptr_t var; // Raw data or pointer
-	int8_t update_flag;
+	int8_t update_flag;			// -1 unused, 0: don't update, 1 or 2: update, 3: always update
+	parameter_type_e var_type;
+	void *var;
 }var_binding_t;
 
-#define bind_var(init_value) (var_binding_t) {(intptr_t)init_value, true}
-void _set_bound_var(var_binding_t *binding, intptr_t value);
-#define set_bound_var(binding, value) _set_bound_var(binding, (intptr_t) value)
+#define bind_var(init_value) (var_binding_t) {(void *)init_value, true}
+void flag_bound_var(var_binding_t *binding);
+
 
 #define INPUT_BUF_MAX_LEN 64
 typedef struct
 {
-	parameter_type_e type;
 	container_style_t style;
 	int32_t min;				// min length of string or minimum value of digit
 	int32_t max;
@@ -133,7 +133,6 @@ typedef struct
 
 typedef struct
 {
-	parameter_type_e type;	// No strings allowed ):<
 	container_style_t style;
 	int32_t min;				// min length of string or minimum value of digit
 	int32_t max;
@@ -183,7 +182,6 @@ typedef struct
 typedef struct
 {
 	container_style_t style;
-	parameter_type_e display_type;
 	var_binding_t *var_binding;	// Display this variable
 	str_t *fmt;					// ... with this format
 	str_t *display_text;		// ... using this string.
@@ -210,8 +208,7 @@ typedef struct
 context_t *ascui_context(uint16_t binding_capacity, container_t *top_container);
 
 // Save the returned address for use in your program
-var_binding_t *ascui_add_context_var_binding(context_t *ctx, intptr_t init_val);
-var_binding_t *ascui_add_context_var_binding_float(context_t *ctx, float init_val);
+var_binding_t *ascui_add_context_var_binding(context_t *ctx, void *ptr, parameter_type_e p_type);
 
 // Supply a saved address to remove
 void ascui_retire_var_binding(var_binding_t *var_binding);
@@ -234,14 +231,14 @@ container_t *ascui_button_subst(bool open, uint8_t selectability, size_type_e s_
 						  UI_side_effect_func side_effect_func, void *domain, void *function_data);
 
 container_t *ascui_input(bool open, size_type_e s_type, uint8_t size, container_style_t style, 
-						  parameter_type_e input_type, int32_t min, int32_t max, var_binding_t *var_binding);
+						  int32_t min, int32_t max, var_binding_t *var_binding);
 
 container_t *ascui_slider(bool open, size_type_e s_type, uint8_t size, container_style_t style, 
-						  parameter_type_e input_type, int32_t min, int32_t max, var_binding_t *var_binding);
+						  int32_t min, int32_t max, var_binding_t *var_binding);
 						  
 container_t *ascui_toggle(bool *var, container_style_t style_on, container_style_t style_off);
 
-container_t *ascui_display(bool open, uint8_t selectability, size_type_e s_type, uint8_t size,parameter_type_e display_type, str_t *fmt, var_binding_t *var_binding, 
+container_t *ascui_display(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, str_t *fmt, var_binding_t *var_binding, 
 							uint8_t h_align, uint8_t v_align, container_style_t style);
 
 container_t *ascui_divider(container_style_t style);
@@ -253,7 +250,7 @@ container_t *ascui_divider(container_style_t style);
 // Composites
 container_t *ascui_input_w_desc(bool open, size_type_e txt_s_type, uint8_t txt_size, str_t *text, uint8_t h_align, uint8_t v_align,
 								size_type_e input_s_type, uint8_t input_size, container_style_t style, 
-						  		parameter_type_e input_type, int32_t min, int32_t max, var_binding_t *var_binding);
+						  		int32_t min, int32_t max, var_binding_t *var_binding);
 
 ///// TOP LEVEL FUNCTIONS
 

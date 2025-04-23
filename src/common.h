@@ -210,6 +210,12 @@ void str_write_from_buf(str_t **dest, char *buf, uint32_t buf_max_size);
 	sprintf(buf, str_charr(fmt), __VA_ARGS__);						\
 	str_write_from_buf(dest, buf, buf_max_size);}
 
+#define str_write_from_sprintf_lit_fmt(buf_max_size, dest, fmt, ...)\
+	{char buf[buf_max_size];										\
+	buf[buf_max_size - 1] = 0;										\
+	sprintf(buf, fmt, __VA_ARGS__);									\
+	str_write_from_buf(dest, buf, buf_max_size);}
+
 void str_write_from_char_ptr(str_t **dest, char *src, uint32_t length);
 
 void str_write_from_str(str_t **dest, str_t *src);

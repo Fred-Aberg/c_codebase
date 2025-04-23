@@ -142,9 +142,6 @@ typedef struct
 
 typedef struct
 {
-    bool right_button_pressed; 
-    bool left_button_pressed; 
-    bool middle_button_pressed; 
     uint8_t x;
     uint8_t y;
     container_t *selected_container;

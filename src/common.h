@@ -3,9 +3,11 @@
 #include "stdint.h"
 #include "stdbool.h"
 
-#define ERROR(str) {fprintf(stdout, str); putc('\n', stdout); fflush(stdout); assert(false);}
+#define ERROR(str) {fprintf(stdout, str); putc('\n', stdout); fflush(stdout); assert(0);}
 #define ERRORF(str, ...) {fprintf(stdout, str, __VA_ARGS__); putc('\n', stdout); fflush(stdout); assert(0);}
+#define WARNING(str) {fprintf(stdout, str); putc('\n', stdout);}
 #define WARNINGF(str, ...) {fprintf(stdout, str, __VA_ARGS__); putc('\n', stdout);}
+#define UNUSED(var) (void) var
 
 typedef struct
 {
@@ -205,7 +207,7 @@ void str_write_from_buf(str_t **dest, char *buf, uint32_t buf_max_size);
 #define str_write_from_sprintf(buf_max_size, dest, fmt, ...)		\
 	{char buf[buf_max_size];										\
 	buf[buf_max_size - 1] = 0;										\
-	sprintf(buf, str_charr(fmt), __VA_ARGS__);									\
+	sprintf(buf, str_charr(fmt), __VA_ARGS__);						\
 	str_write_from_buf(dest, buf, buf_max_size);}
 
 void str_write_from_char_ptr(str_t **dest, char *src, uint32_t length);

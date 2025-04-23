@@ -10,7 +10,7 @@
 #define get_orientation(container) *(container_orientation_e *)(container->container_type_data)
 #define INLINE_COLOR '\a'
 #define INLINE_FONT '\b'
-
+#define SCROLL_KNOB_CHAR 'o'
 
 context_t *ascui_context(uint16_t binding_capacity, container_t *top_container)
 {
@@ -515,20 +515,11 @@ static void calc_line_widths(ui8_list_t *line_widths, str_t *text, uint8_t avail
 
 	if(c_width)
 		ui8_list_add(line_widths, c_width);
-
-	// for (uint8_t i = 0; i < line_widths->count; i++)
-	// {
-		// uint8_t h_start = max((int)(available_width) - (int)ui8_list_get(*line_widths, i), 0);
-		// printf("\n = %u + %u + %u", h_start,
-		// ui8_list_get(*line_widths, i),
-		// available_width - h_start - ui8_list_get(*line_widths, i));
-		// 
-	// }
 }
 
 static void draw_text(grid_t *grid, str_t *text, uint8_t h_align, uint8_t v_align, container_style_t style, 
 						uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, bool invert_cols, ui8_list_t *line_widths, 
-						uint8_t *baked_available_width, uint16_t *scroll_offset)
+						uint8_t *baked_available_width, uint16_t *scroll_offset, bool scrolling)
 {
 	// Invertion
 	color8b_t bg_col;
@@ -560,7 +551,8 @@ static void draw_text(grid_t *grid, str_t *text, uint8_t h_align, uint8_t v_alig
 	}
 
 	// Set max-scroll
-	*scroll_offset = min(*scroll_offset, max(line_widths->count - 1 - (y1 - y0), 0)); // line_widths->count ~ max scroll
+	uint8_t max_scroll = max(line_widths->count - 1 - (y1 - y0), 0);
+	*scroll_offset = min(*scroll_offset, max_scroll); // line_widths->count ~ max scroll
 
 	uint8_t c_line = 0;
 	uint8_t horizontal_start;
@@ -662,9 +654,13 @@ static void draw_text(grid_t *grid, str_t *text, uint8_t h_align, uint8_t v_alig
 		}
 		_x++;
 	}
+	if(scrolling && max_scroll != 0 && invert_cols)
+		tl_plot_smbl_w_bg(grid, x0, y0 + (y1 - y0) * ((float)(*scroll_offset) / max_scroll), 
+							SCROLL_KNOB_CHAR, style.char_col, style.bg_col, style.font);
 }
 
-static void draw_box(grid_t *grid, container_style_t style, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, bool invert_cols)
+static void draw_box(grid_t *grid, container_style_t style, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, bool invert_cols, 
+					uint16_t scroll, uint16_t max_scroll, container_orientation_e orientation)
 {
 	if (invert_cols)
 	{
@@ -682,6 +678,14 @@ static void draw_box(grid_t *grid, container_style_t style, uint8_t x0, uint8_t 
 	tl_plot_smbl_w_bg(grid, x0, y1, style.corner_symbol, style.char_col, style.border_col, style.font);
 	tl_plot_smbl_w_bg(grid, x1, y0, style.corner_symbol, style.char_col, style.border_col, style.font);
 	tl_plot_smbl_w_bg(grid, x1, y1, style.corner_symbol, style.char_col, style.border_col, style.font);
+
+	if(scroll != 0 && max_scroll != 0 && invert_cols)
+	{
+		if(orientation == VERTICAL)
+			tl_plot_smbl_w_bg(grid, x0 + (x1 - x0) * ((float)scroll / max_scroll), y0, SCROLL_KNOB_CHAR, style.border_col, style.bg_col, style.font);
+		else if(orientation == HORIZONTAL)
+			tl_plot_smbl_w_bg(grid, x0, y0 + (y1 - y0) * ((float)scroll / max_scroll), SCROLL_KNOB_CHAR, style.border_col, style.bg_col, style.font);
+	}
 }
 
 static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
@@ -802,7 +806,7 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 			x1++;
 			y1++;
 			
-			draw_box(grid, style, x0, y0, x1, y1, hovered || selected);
+			draw_box(grid, style, x0, y0, x1, y1, hovered || selected, container->scroll_offset, max_scroll, orientation);
 		}
 
 			
@@ -821,7 +825,11 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 
 		draw_text(grid, t_data->text, t_data->h_alignment, t_data->v_alignment, t_data->style, 
 								x0, y0, x1, y1, selected || hovered, &t_data->baked_line_widths, 
-								&t_data->baked_available_width, &container->scroll_offset);
+								&t_data->baked_available_width, &container->scroll_offset, cursor->scroll);
+
+		if(cursor->scroll && max_scroll != 0)
+			tl_plot_smbl_w_bg(grid, x0, y0 + (y1 - y0) * (container->scroll_offset / max_scroll), 
+								'#', t_data->style.bg_col, t_data->style.char_col, t_data->style.font);
 
 		return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
 	}
@@ -842,7 +850,7 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 
 		draw_text(grid, bt_data->text, bt_data->h_alignment, bt_data->v_alignment, bt_data->style, 
 								x0, y0, x1, y1, selected || hovered, &bt_data->baked_line_widths, 
-								&bt_data->baked_available_width, &container->scroll_offset);
+								&bt_data->baked_available_width, &container->scroll_offset, cursor->scroll);
 
 		return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
 	}
@@ -953,12 +961,12 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 	{
 		toggle_data_t *tg_data = ascui_get_toggle_data(container);
 
-		if(hovered && cursor->left_button_pressed)
+		if(hovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
 			*tg_data->var = !(*tg_data->var);
 		
 		container_style_t style = (*tg_data->var)? tg_data->style_on : tg_data->style_off;
 		
-		draw_box(grid, style, x0, y0, x0 + 2, y0 + 2, hovered);
+		draw_box(grid, style, x0, y0, x0 + 2, y0 + 2, hovered, 0, 0, 0);
 
 		if(*tg_data->var)
 			tl_plot_smbl(grid, x0 + 1, y0 + 1, '#', style.char_col, style.font);
@@ -988,7 +996,7 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 
 		draw_text(grid, d_data->display_text, d_data->h_alignment, d_data->v_alignment, d_data->style, 
 								x0, y0, x1, y1, selected || hovered, &d_data->baked_line_widths, 
-								&d_data->baked_available_width, &container->scroll_offset);
+								&d_data->baked_available_width, &container->scroll_offset, cursor->scroll);
 
 		return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
 	}
@@ -1093,9 +1101,6 @@ void ascui_update_cursor(grid_t *grid, cursor_t *cursor)
 	pos16_t mouse_grid_pos = tl_screen_to_grid_coords(grid, pos16(GetMouseX(), GetMouseY()));
 	cursor->x = mouse_grid_pos.x;
 	cursor->y = mouse_grid_pos.y;
-	cursor->right_button_pressed = IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
-	cursor->left_button_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-	cursor->middle_button_pressed = IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE);
 	cursor->scroll = GetMouseWheelMove();
 }
 
@@ -1115,7 +1120,7 @@ void ascui_navigate_ui(grid_t *grid, container_t *top_container, cursor_t *curso
 
 	if(cursor->hovered_container != NULL)
 	{
-		if(cursor->left_button_pressed && (cursor->hovered_container->container_type == BUTTON || cursor->hovered_container->selectability == SELECTABLE))
+		if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && (cursor->hovered_container->container_type == BUTTON || cursor->hovered_container->selectability == SELECTABLE))
 		{
 			if(click_sound)
 				PlaySound(*click_sound);
@@ -1136,12 +1141,12 @@ void ascui_navigate_ui(grid_t *grid, container_t *top_container, cursor_t *curso
 		}
 
 		// Select
-		if(cursor->left_button_pressed && cursor->hovered_container->selectability == SELECTABLE)
+		if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && cursor->hovered_container->selectability == SELECTABLE)
 		{
 			cursor->selected_container = cursor->hovered_container;
 		}
 		// Deselect
-		if(cursor->hovered_container == cursor->selected_container && cursor->right_button_pressed)
+		if(cursor->hovered_container == cursor->selected_container && IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
 			cursor->selected_container = NULL;
 	}
 }
@@ -1196,7 +1201,8 @@ void ascui_run_ui(grid_t *grid, context_t *ctx, double *ascui_drawing_time, Soun
 
 void ascui_dropdown_button_func(void *dropdown_cntr, void *button_text, cursor_t *cursor)
 {
-	if (!cursor->left_button_pressed)
+	UNUSED(cursor);
+	if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
 		return;
 	container_t *container = (container_t *)dropdown_cntr; 
 	container->open = !container->open;

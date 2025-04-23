@@ -12,7 +12,9 @@
 
 void dropdown_button(void *domain, void *function_data, cursor_t *cursor)
 {
-	if (!cursor->left_button_pressed)
+	UNUSED(cursor);
+	UNUSED(function_data);
+	if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
 		return;
 	container_t *container = (container_t *)domain; 
 	container->open = !container->open;
@@ -22,7 +24,9 @@ context_t *c_ctx;
 
 void navigate_button(void *domain, void *function_data, cursor_t *cursor)
 {
-	if (!cursor->left_button_pressed)
+	UNUSED(cursor);
+	UNUSED(function_data);
+	if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
 		return;
 	c_ctx = *(context_t **)domain; 
 }
@@ -207,17 +211,14 @@ int main(){
 
 	// Main Grid
 	grid_t *main_grid = tl_init_grid(0, 0, screensize_x, screensize_y, tile_width, 1.0f, fonts, 200);
-	// grid_t *subgrid = tl_init_grid(0, 0, 100, 100, tile_width, 1.0f, fonts, 200);
 	// UI
 	main_ui();
 	text_example_ui();
 	input_example_ui();
-	// ascui_get_subgrid_data(subgrid_container)->s    %ubgrid = subgrid;
 	cursor_t cursor; 
 	ascui_print_ui(main_ctx->top_container);
 	ascui_print_ui(text_ctx->top_container);
 	ascui_print_ui(input_ctx->top_container);
-	// pos16_t mouse_subgrid_pos;
 
 	c_ctx = main_ctx;
 	

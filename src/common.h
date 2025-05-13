@@ -55,6 +55,8 @@ float flclamp(float minv, float x, float maxv);
 #define NO_DUPLICATES 0
 #define new_list(type, init_capacity, ordered, dups_allowed) \
 {calloc(init_capacity, sizeof(type)), 0, init_capacity, ordered, dups_allowed }
+#define new_pos_list(type, init_capacity, dups_allowed) \
+{calloc(init_capacity, sizeof(type)), 0, init_capacity, false, dups_allowed }
 
 #define clear_list(list) ((ui8_list_t *)list)->count = 0
 
@@ -89,7 +91,8 @@ void free_array(void *array);
 
 /// LISTS
 
-#define LIST_REALLOC_INCREASE 1.5f
+// 1.5 by default (50% increase)
+void set_realloc_increase(float percentage_increase);
 
 // Unordered or ordered
 // Contiguous
@@ -132,6 +135,19 @@ typedef struct
 uint32_t ui32_list_get(ui32_list_t list, uint32_t index);
 void ui32_list_add(ui32_list_t *list, uint32_t value);
 void ui32_list_remove(ui32_list_t *list, uint32_t index);
+
+typedef struct
+{
+    pos8_t *items;
+    uint16_t count;
+    uint16_t capacity;
+    bool ordered;
+	bool duplicates_allowed;
+} pos8_list_t;
+
+pos8_t pos8_list_get(pos8_list_t list, uint16_t index);
+void pos8_list_add(pos8_list_t *list, pos8_t value);
+void pos8_list_remove(pos8_list_t *list, uint16_t index);
 
 void free_list(void *list);
 
@@ -213,7 +229,7 @@ void str_write_from_buf(str_t **dest, char *buf, uint32_t buf_max_size);
 #define str_write_from_sprintf_lit_fmt(buf_max_size, dest, fmt, ...)\
 	{char buf[buf_max_size];										\
 	buf[buf_max_size - 1] = 0;										\
-	sprintf(buf, fmt, __VA_ARGS__);									\
+	sprintf(buf,§§fmt, __VA_ARGS__);									\
 	str_write_from_buf(dest, buf, buf_max_size);}
 
 void str_write_from_char_ptr(str_t **dest, char *src, uint32_t length);

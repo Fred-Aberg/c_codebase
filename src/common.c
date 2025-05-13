@@ -106,6 +106,15 @@ void free_array(void *array)
 	}
 }
 
+float LIST_REALLOC_INCREASE = 1.5f;
+void set_realloc_increase(float percentage_increase)
+{
+	if(percentage_increase <= 1.0f)
+		ERRORF("\nset_realloc_increase: percentage_increase too low (%f <= 1.0)", percentage_increase)
+	LIST_REALLOC_INCREASE = percentage_increase;
+}
+
+
 uint8_t ui8_list_get(ui8_list_t list, uint8_t index)
 {
 	if(index < list.count)
@@ -285,6 +294,54 @@ void ui32_list_remove(ui32_list_t *list, uint32_t index)
 	list->count--;
 	return;
 }
+
+//
+pos8_t pos8_list_get(pos8_list_t list, uint16_t index)
+{
+	if(index < list.count)
+		return list.items[index];
+	else
+		ERRORF("\npos8_list_t GET index overflow! i=%u cap=%u", index, list.count)
+}
+void pos8_list_add(pos8_list_t *list, pos8_t value)
+{
+	if (list->capacity <= list->count)
+	{
+		list->capacity = list->capacity * LIST_REALLOC_INCREASE + 1; 
+		list->items = (pos8_t *)realloc(list->items, (list->capacity * sizeof(pos8_t)));
+	}
+
+	if(!list->duplicates_allowed) // unordered and duplicates disallowed
+		for (uint32_t i = 0; i < list->count; i++)
+			if(list->items[i].x == value.x && list->items[i].y == value.y)
+				return;
+			
+	// Unordered, not a duplicate or largest value
+	list->items[list->count] = value;
+	list->count++;
+}
+
+void pos8_list_remove(pos8_list_t *list, uint16_t index)
+{
+	if (index >= list->count)
+		ERRORF("\npos8_list_t REMOVE: index overflow! i=%u cap=%u", index, list->count)
+	if(list->count == 0)
+		ERROR("\npos8_list_t REMOVE: list is empty!")
+
+	
+	if(list->count == 1 || index == list->count - 1) // Last element or only element
+	{
+		list->count--;
+		return;
+	}
+		
+	// Move all items from and including items[i] one step backward
+	memmove(&list->items[index], &list->items[index + 1], (list->count - index) * sizeof(pos8_t));
+	
+	list->count--;
+	return;
+}
+//
 
 void free_list(void *list)
 {

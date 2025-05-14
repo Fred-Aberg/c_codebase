@@ -20,6 +20,18 @@ void setUp(void) {};
 
 void tearDown(void) {};
 
+void pos_lists()
+{
+	pos8_t p = pos8(0,1);
+	TEST_ASSERT_EQUAL_UINT(pos8_to_ui16(p), 256);
+	p = pos8(1,0);
+	TEST_ASSERT_EQUAL_UINT(pos8_to_ui16(p), 1);
+	p = pos8(1,1);
+	TEST_ASSERT_EQUAL_UINT(pos8_to_ui16(p), 257);
+	
+	TEST_ASSERT_FALSE(pos8_to_ui16(pos8(1,10)) == pos8_to_ui16(pos8(34,5)));
+}
+
 void str_initialization()
 {
 	str_t *str = str_empty(10);
@@ -104,5 +116,6 @@ int main()
     UNITY_BEGIN();
     RUN_TEST(str_initialization);
     RUN_TEST(str_writing);
+    RUN_TEST(pos_lists);
     return UNITY_END();
 }

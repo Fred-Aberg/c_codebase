@@ -14,12 +14,14 @@ typedef struct
     uint8_t x;
     uint8_t y;
 } pos8_t;
+#define pos8_to_ui16(p) (uint16_t)((p.y << 8) + p.x)
 
 typedef struct
 {
     uint16_t x;
     uint16_t y;
 } pos16_t;
+#define pos16_to_ui32(p) (uint32_t)((p.y << 16) + p.x)
 
 #define c(r, g, b) (Color){r, g, b, 255}
 #define pos8(x, y) (pos8_t){x, y}
@@ -55,8 +57,7 @@ float flclamp(float minv, float x, float maxv);
 #define NO_DUPLICATES 0
 #define new_list(type, init_capacity, ordered, dups_allowed) \
 {calloc(init_capacity, sizeof(type)), 0, init_capacity, ordered, dups_allowed }
-#define new_pos_list(type, init_capacity, dups_allowed) \
-{calloc(init_capacity, sizeof(type)), 0, init_capacity, false, dups_allowed }
+
 
 #define clear_list(list) ((ui8_list_t *)list)->count = 0
 
@@ -148,6 +149,19 @@ typedef struct
 pos8_t pos8_list_get(pos8_list_t list, uint16_t index);
 void pos8_list_add(pos8_list_t *list, pos8_t value);
 void pos8_list_remove(pos8_list_t *list, uint16_t index);
+
+typedef struct
+{
+    pos16_t *items;
+    uint32_t count;
+    uint32_t capacity;
+    bool ordered;
+	bool duplicates_allowed;
+} pos16_list_t;
+
+pos16_t pos16_list_get(pos16_list_t list, uint32_t index);
+void pos16_list_add(pos16_list_t *list, pos16_t value);
+void pos16_list_remove(pos16_list_t *list, uint32_t index);
 
 void free_list(void *list);
 

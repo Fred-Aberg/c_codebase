@@ -45,8 +45,8 @@ container_t *subgrid_container;
 void main_ui()
 {
 	
-	container_style_t s_0 = style(0, col8bt(0,0,0), col8bt(5,0,2), col8bt(7,7,3), '=', '|', '+');
-	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
+	container_style_t s_0 = style(0, col8bt(0,0,0), col8bt(5,0,2), col8bt(7,7,3), 134, 133, 135);
+	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), 134, 133, 135);
 	main_ctx = ascui_context(0,
 		ascui_container(true, PERCENTAGE, 100, VERTICAL, 1,
 			ascui_box(true, HOVERABLE, TILES, 1, HORIZONTAL, s_0, 3, 
@@ -65,7 +65,7 @@ void text_example_ui()
 {
 	create_example_strings();
 
-	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
+	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), 134, 133, 135);
 	container_style_t s_title = style(1, col8bt(4,0,2), col8bt(2,0,1), col8bt(0,0,0), '-', '|', 'O');
 	container_style_t s_desc = style(0, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
 	container_style_t s_text = style(0, col8bt(4,0,2), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
@@ -138,7 +138,7 @@ float example_float = 0.0f;
 void input_example_ui()
 {
 	
-	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
+	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), 134, 133, 135);
 	container_style_t s_title = style(1, col8bt(4,0,2), col8bt(2,0,1), col8bt(0,0,0), '-', '|', 'O');
 	container_style_t s_desc = style(0, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
 	container_style_t s_text = style(0, col8bt(4,0,2), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');

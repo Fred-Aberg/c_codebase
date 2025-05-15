@@ -10,7 +10,7 @@
 #define get_orientation(container) *(container_orientation_e *)(container->container_type_data)
 #define INLINE_COLOR_CHANGE '\a'
 #define INLINE_TEX_MAP_CHANGE '\b'
-#define SCROLL_KNOB_CHAR 'o'
+#define SCROLL_KNOB_CHAR 131
 
 context_t *ascui_context(uint16_t binding_capacity, container_t *top_container)
 {

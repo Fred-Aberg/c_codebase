@@ -5,12 +5,12 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
-#define style(font, bg_col, border_col, char_col, border_h_symbol, border_v_symbol, corner_symbol) (container_style_t){font, bg_col, border_col, char_col, border_h_symbol, border_v_symbol, corner_symbol}
+#define style(tex_map, bg_col, border_col, char_col, border_h_symbol, border_v_symbol, corner_symbol) (container_style_t){tex_map, bg_col, border_col, char_col, border_h_symbol, border_v_symbol, corner_symbol}
 
 
 typedef struct 
 {
-	uint8_t font;
+	uint8_t tex_map;
     color8b_t bg_col;
     color8b_t border_col;
     color8b_t char_col;

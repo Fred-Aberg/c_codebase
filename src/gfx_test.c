@@ -200,17 +200,14 @@ int main(){
 	uint16_t tile_width = 25;
 
     InitWindow(screensize_x, screensize_y, "c_codebase Test Suite");
-    Font unscii = LoadFontEx("Resources/Fonts/unscii-8-alt.ttf", 32, 0, 256);
-    Font unscii_fantasy = LoadFontEx("Resources/Fonts/unscii-8-fantasy.ttf", 32, 0, 256);
-
-	Font fonts[2] = {unscii, unscii_fantasy};
+	Texture2D tex_maps[2] = {LoadTexture("Resources/Fonts/font_base.png"), LoadTexture("Resources/Fonts/font_base.png")};
     
     SetTargetFPS(60);
     HideCursor();
     SetWindowMinSize(200, 200);
 
 	// Main Grid
-	grid_t *main_grid = tl_init_grid(0, 0, screensize_x, screensize_y, tile_width, 1.0f, fonts, 200);
+	grid_t *main_grid = tl_init_grid(0, 0, screensize_x, screensize_y, tile_width, 1.0f, tex_maps, 10, 10, 200);
 	// UI
 	main_ui();
 	text_example_ui();
@@ -289,8 +286,8 @@ int main(){
         EndDrawing();
     }
     free_example_strings();
-    UnloadFont(unscii);
-    UnloadFont(unscii_fantasy);
+    UnloadTexture(tex_maps[0]);
+    UnloadTexture(tex_maps[1]);
     CloseWindow();
     ascui_destroy(main_ctx->top_container);
 	tl_deinit_grid(main_grid);

@@ -8,8 +8,8 @@
 #include "raytiles.h"
 
 #define get_orientation(container) *(container_orientation_e *)(container->container_type_data)
-#define INLINE_COLOR '\a'
-#define INLINE_FONT '\b'
+#define INLINE_COLOR_CHANGE '\a'
+#define INLINE_TEX_MAP_CHANGE '\b'
 #define SCROLL_KNOB_CHAR 'o'
 
 context_t *ascui_context(uint16_t binding_capacity, container_t *top_container)
@@ -464,21 +464,21 @@ static void calc_line_widths(ui8_list_t *line_widths, str_t *text, uint8_t avail
 	
 	uint8_t c_width = 0;
 	bool inline_col = false;
-	bool inline_font = false;
+	bool inl_tex_map_change = false;
 
 	// printf("\n\n%u -> %u", text_len, available_width);
 	for(uint16_t i = 0; i < text->length; i++)
 	{	
-		if(str_get(text, i) == INLINE_FONT)
+		if(str_get(text, i) == INLINE_TEX_MAP_CHANGE)
 		{
-			if(inline_font)
-				{ inline_font = false; i++; }
+			if(inl_tex_map_change)
+				{ inl_tex_map_change = false; i++; }
 			else
-				{ inline_font = true; i += 3; }
+				{ inl_tex_map_change = true; i += 3; }
 			continue; 
 		}
 		
-		if (str_get(text, i) == INLINE_COLOR)
+		if (str_get(text, i) == INLINE_COLOR_CHANGE)
 		{
 			if(inline_col)
 				{ inline_col = false; i++; }
@@ -572,7 +572,7 @@ static void draw_text(grid_t *grid, str_t *text, uint8_t h_align, uint8_t v_alig
 	uint8_t _x = 0;
 	bool inl_font_active = false;
 	bool inl_color_active = false;
-	char font = style.font;
+	uint8_t tex_map = style.tex_map;
 	color8b_t inl_color;
 
 	// Set initial line width
@@ -593,23 +593,23 @@ static void draw_text(grid_t *grid, str_t *text, uint8_t h_align, uint8_t v_alig
 		if(c == 0)
 			break;
 		
-		if(c == INLINE_FONT)
+		if(c == INLINE_TEX_MAP_CHANGE)
 		{
 			if(inl_font_active)
 			{
-				font = style.font; // Restore old font
+				tex_map = style.tex_map; // Restore old font
 				inl_font_active = false;
 			}
 			else
 			{
 				inl_font_active = true;
-				font = atoi(&str_charr(text)[i + 1]);
+				tex_map = atoi(&str_charr(text)[i + 1]);
 				i += 3;
 			}
 			continue;
 		}
 
-		if (c == INLINE_COLOR)
+		if (c == INLINE_COLOR_CHANGE)
 		{
 			if(inl_color_active)
 				inl_color_active = false;
@@ -648,15 +648,15 @@ static void draw_text(grid_t *grid, str_t *text, uint8_t h_align, uint8_t v_alig
 		if(_y >= 0 && !(y0 + max(0, _y) > y1)) // do not render if tiles have been "scrolled" out of view - or if the text overflows
 		{
 			if(inl_color_active)
-				tl_plot_smbl(grid, x0 + _x + horizontal_start, y0 + _y, c, inl_color, font);
+				tl_plot_smbl(grid, x0 + _x + horizontal_start, y0 + _y, c, inl_color, tex_map);
 			else
-				tl_plot_smbl(grid, x0 + _x + horizontal_start, y0 + _y, c, smbl_col, font);
+				tl_plot_smbl(grid, x0 + _x + horizontal_start, y0 + _y, c, smbl_col, tex_map);
 		}
 		_x++;
 	}
 	if(scrolling && max_scroll != 0 && invert_cols)
 		tl_plot_smbl_w_bg(grid, x0, y0 + (y1 - y0) * ((float)(*scroll_offset) / max_scroll), 
-							SCROLL_KNOB_CHAR, style.char_col, style.bg_col, style.font);
+							SCROLL_KNOB_CHAR, style.char_col, style.bg_col, style.tex_map);
 }
 
 static void draw_box(grid_t *grid, container_style_t style, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, bool invert_cols, 
@@ -669,22 +669,22 @@ static void draw_box(grid_t *grid, container_style_t style, uint8_t x0, uint8_t 
 		style.border_col = tmp;
 	}
 
-	tl_draw_line_smbl_w_bg(grid, x0 + 1, y0, x1 - 1, y0, style.border_h_symbol, style.char_col, style.border_col, style.font); // Top
-	tl_draw_line_smbl_w_bg(grid, x0 + 1, y1, x1 - 1, y1, style.border_h_symbol, style.char_col, style.border_col, style.font); // Bottom
-	tl_draw_line_smbl_w_bg(grid, x0, y0 + 1, x0, y1 - 1, style.border_v_symbol, style.char_col, style.border_col, style.font); // Left
-	tl_draw_line_smbl_w_bg(grid, x1, y0 + 1, x1, y1 - 1, style.border_v_symbol, style.char_col, style.border_col, style.font); // Right
+	tl_draw_line_smbl_w_bg(grid, x0 + 1, y0, x1 - 1, y0, style.border_h_symbol, style.char_col, style.border_col, style.tex_map); // Top
+	tl_draw_line_smbl_w_bg(grid, x0 + 1, y1, x1 - 1, y1, style.border_h_symbol, style.char_col, style.border_col, style.tex_map); // Bottom
+	tl_draw_line_smbl_w_bg(grid, x0, y0 + 1, x0, y1 - 1, style.border_v_symbol, style.char_col, style.border_col, style.tex_map); // Left
+	tl_draw_line_smbl_w_bg(grid, x1, y0 + 1, x1, y1 - 1, style.border_v_symbol, style.char_col, style.border_col, style.tex_map); // Right
 
-	tl_plot_smbl_w_bg(grid, x0, y0, style.corner_symbol, style.char_col, style.border_col, style.font);
-	tl_plot_smbl_w_bg(grid, x0, y1, style.corner_symbol, style.char_col, style.border_col, style.font);
-	tl_plot_smbl_w_bg(grid, x1, y0, style.corner_symbol, style.char_col, style.border_col, style.font);
-	tl_plot_smbl_w_bg(grid, x1, y1, style.corner_symbol, style.char_col, style.border_col, style.font);
+	tl_plot_smbl_w_bg(grid, x0, y0, style.corner_symbol, style.char_col, style.border_col, style.tex_map);
+	tl_plot_smbl_w_bg(grid, x0, y1, style.corner_symbol, style.char_col, style.border_col, style.tex_map);
+	tl_plot_smbl_w_bg(grid, x1, y0, style.corner_symbol, style.char_col, style.border_col, style.tex_map);
+	tl_plot_smbl_w_bg(grid, x1, y1, style.corner_symbol, style.char_col, style.border_col, style.tex_map);
 
 	if(scroll != 0 && max_scroll != 0 && invert_cols)
 	{
 		if(orientation == VERTICAL)
-			tl_plot_smbl_w_bg(grid, x0 + (x1 - x0) * ((float)scroll / max_scroll), y0, SCROLL_KNOB_CHAR, style.border_col, style.bg_col, style.font);
+			tl_plot_smbl_w_bg(grid, x0 + (x1 - x0) * ((float)scroll / max_scroll), y0, SCROLL_KNOB_CHAR, style.border_col, style.bg_col, style.tex_map);
 		else if(orientation == HORIZONTAL)
-			tl_plot_smbl_w_bg(grid, x0, y0 + (y1 - y0) * ((float)scroll / max_scroll), SCROLL_KNOB_CHAR, style.border_col, style.bg_col, style.font);
+			tl_plot_smbl_w_bg(grid, x0, y0 + (y1 - y0) * ((float)scroll / max_scroll), SCROLL_KNOB_CHAR, style.border_col, style.bg_col, style.tex_map);
 	}
 }
 
@@ -829,7 +829,7 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 
 		if(cursor->scroll && max_scroll != 0)
 			tl_plot_smbl_w_bg(grid, x0, y0 + (y1 - y0) * (container->scroll_offset / max_scroll), 
-								'#', t_data->style.bg_col, t_data->style.char_col, t_data->style.font);
+								'#', t_data->style.bg_col, t_data->style.char_col, t_data->style.tex_map);
 
 		return (parent_orientation == VERTICAL)? x1-x0 + 1 : y1-y0 + 1;
 	}
@@ -914,15 +914,15 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 			}
 			
 			uint16_t i = 0;
-			tl_plot_smbl(grid, x0, y0 + vertical_midpoint, '>', smbl_col, input_data->style.font);
+			tl_plot_smbl(grid, x0, y0 + vertical_midpoint, '>', smbl_col, input_data->style.tex_map);
 			while (input_data->buf[i] != '\0' && i < x1 - x0 && i < input_data->buf_i)
 			{
-				tl_plot_smbl(grid, x0 + i + 1, y0 + vertical_midpoint, input_data->buf[i], smbl_col, input_data->style.font);
+				tl_plot_smbl(grid, x0 + i + 1, y0 + vertical_midpoint, input_data->buf[i], smbl_col, input_data->style.tex_map);
 				i++;
 			}
 			// Cursor bar
 			if(t)
-				tl_plot_smbl(grid, x0 + input_data->buf_i + 1, y0 + vertical_midpoint, '|', smbl_col, input_data->style.font);
+				tl_plot_smbl(grid, x0 + input_data->buf_i + 1, y0 + vertical_midpoint, '|', smbl_col, input_data->style.tex_map);
 		}
 		else	// NOT SELECTED
 		{
@@ -950,7 +950,7 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 			uint16_t i = 0;
 			while (input_data->buf[i] != '\0' && i < x1 - x0 && i < INPUT_BUF_MAX_LEN)
 			{
-				tl_plot_smbl(grid, x0 + i, y0 + vertical_midpoint, input_data->buf[i], smbl_col, input_data->style.font);
+				tl_plot_smbl(grid, x0 + i, y0 + vertical_midpoint, input_data->buf[i], smbl_col, input_data->style.tex_map);
 				i++;
 			}
 		}
@@ -969,7 +969,7 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 		draw_box(grid, style, x0, y0, x0 + 2, y0 + 2, hovered, 0, 0, 0);
 
 		if(*tg_data->var)
-			tl_plot_smbl(grid, x0 + 1, y0 + 1, '#', style.char_col, style.font);
+			tl_plot_smbl(grid, x0 + 1, y0 + 1, '#', style.char_col, style.tex_map);
 		
 		return 3;
 	}
@@ -1006,15 +1006,15 @@ static uint16_t ascui_draw_container(grid_t *grid, container_t *container, uint1
 
 		if(parent_orientation == HORIZONTAL)
 		{
-			tl_draw_line_smbl_w_bg(grid, x0 + 1, y0, x1 - 1, y0, style.border_h_symbol, style.char_col, style.border_col, style.font);
-			tl_plot_smbl_w_bg(grid, x0, y0, style.corner_symbol, style.char_col, style.border_col, style.font);
-			tl_plot_smbl_w_bg(grid, x1, y0, style.corner_symbol, style.char_col, style.border_col, style.font);
+			tl_draw_line_smbl_w_bg(grid, x0 + 1, y0, x1 - 1, y0, style.border_h_symbol, style.char_col, style.border_col, style.tex_map);
+			tl_plot_smbl_w_bg(grid, x0, y0, style.corner_symbol, style.char_col, style.border_col, style.tex_map);
+			tl_plot_smbl_w_bg(grid, x1, y0, style.corner_symbol, style.char_col, style.border_col, style.tex_map);
 		}
 		else
 		{
-			tl_draw_line_smbl_w_bg(grid, x0, y0 + 1, x0, y1 - 1, style.border_v_symbol, style.char_col, style.border_col, style.font);
-			tl_plot_smbl_w_bg(grid, x0, y0, style.corner_symbol, style.char_col, style.border_col, style.font);
-			tl_plot_smbl_w_bg(grid, x0, y1, style.corner_symbol, style.char_col, style.border_col, style.font);
+			tl_draw_line_smbl_w_bg(grid, x0, y0 + 1, x0, y1 - 1, style.border_v_symbol, style.char_col, style.border_col, style.tex_map);
+			tl_plot_smbl_w_bg(grid, x0, y0, style.corner_symbol, style.char_col, style.border_col, style.tex_map);
+			tl_plot_smbl_w_bg(grid, x0, y1, style.corner_symbol, style.char_col, style.border_col, style.tex_map);
 		}
 
 		return 1;

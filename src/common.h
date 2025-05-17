@@ -140,8 +140,8 @@ void ui32_list_remove(ui32_list_t *list, uint32_t index);
 typedef struct
 {
     pos8_t *items;
-    uint16_t count;
-    uint16_t capacity;
+    uint32_t count;
+    uint32_t capacity;
     bool ordered;
 	bool duplicates_allowed;
 } pos8_list_t;
@@ -164,6 +164,19 @@ void pos16_list_add(pos16_list_t *list, pos16_t value);
 void pos16_list_remove(pos16_list_t *list, uint32_t index);
 
 void free_list(void *list);
+
+typedef struct
+{
+    void **items;
+    uint32_t count;
+    uint32_t capacity;
+    bool ordered;
+	bool duplicates_allowed;
+} ptr_list_t;
+
+void *ptr_list_get(ptr_list_t list, uint32_t index);
+void ptr_list_add(ptr_list_t *list, void *value);
+void ptr_list_remove(ptr_list_t *list, uint32_t index);
 
 /// STRINGS
 

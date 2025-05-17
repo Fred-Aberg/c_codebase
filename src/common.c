@@ -413,7 +413,66 @@ void pos16_list_remove(pos16_list_t *list, uint32_t index)
 	memmove(&list->items[index], &list->items[index + 1], (list->count - index) * sizeof(pos16_t));
 	
 	list->count--;
-	return;
+}
+
+void *ptr_list_get(ptr_list_t list, uint32_t index)
+{
+	if(index < list.count)
+		return list.items[index];
+	else
+		ERRORF("\nptr_list_t GET index overflow! i=%u cap=%u", index, list.count)
+}
+
+void ptr_list_add(ptr_list_t *list, void *value)
+{
+	if (list->capacity <= list->count)
+	{
+		list->capacity = list->capacity * LIST_REALLOC_INCREASE + 1; 
+		list->items = (void *)realloc(list->items, (list->capacity * sizeof(void *)));
+	}
+
+	if(list->ordered) // ordered and maybe duplicates disallowed
+		for (uint32_t i = 0; i < list->count; i++)
+			if(list->items[i] >= value)
+			{
+				if(!list->duplicates_allowed)
+					return;
+				// Move all items from and including items[i] one step forward
+				memmove(&list->items[i + 1], &list->items[i], (list->count - i) * sizeof(void *));
+				
+				list->items[i] = value;
+				list->count++;
+				return;
+			}
+
+	if(!list->duplicates_allowed) // unordered and duplicates disallowed
+		for (uint32_t i = 0; i < list->count; i++)
+			if(list->items[i] == value)
+				return;
+			
+	// Unordered, not a duplicate or largest value
+	list->items[list->count] = value;
+	list->count++;	
+}
+
+void ptr_list_remove(ptr_list_t *list, uint32_t index)
+{
+	if (index >= list->count)
+		ERRORF("\nptr_list_t REMOVE: index overflow! i=%u cap=%u", index, list->count)
+	if(list->count == 0)
+		ERROR("\nptr_list_t REMOVE: list is empty!")
+
+	
+	if(list->count == 1 || index == list->count - 1) // Last element or only element
+	{
+		list->count--;
+		return;
+	}
+		
+	// Move all items from and including items[i] one step backward
+	memmove(&list->items[index], &list->items[index + 1], (list->count - index) * sizeof(void *));
+	
+	list->count--;
 }
 
 void free_list(void *list)

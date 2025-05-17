@@ -195,8 +195,8 @@ int main(){
 	long tick = 0;
 
 
-   	int16_t screensize_x = 1500;
-	int16_t screensize_y = 1000;
+   	int16_t screensize_x = 1000;
+	int16_t screensize_y = 750;
 	uint16_t tile_width = 25;
 
     InitWindow(screensize_x, screensize_y, "c_codebase Test Suite");

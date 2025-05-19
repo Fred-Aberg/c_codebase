@@ -242,7 +242,7 @@ int main(){
 			// tl_plot_smbl_w_bg(subgrid, mouse_subgrid_pos.x, mouse_subgrid_pos.y, 'A', WHITE8B, BLACK8B, 1);
 		// }
 		// else
-		tl_plot_smbl_w_bg(main_grid, cursor.x, cursor.y, 'A', WHITE8B, BLACK8B, 0);
+		tl_plot_smbl(main_grid, cursor.x, cursor.y, 31, WHITE8B, 0);
 
 		tl_rendering_time = -GetTime();
 		pos16_t main_grid_dcalls = tl_render_grid(main_grid);

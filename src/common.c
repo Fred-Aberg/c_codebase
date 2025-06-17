@@ -546,7 +546,7 @@ str_t *str_empty(uint32_t init_capacity)
 	return new_str;
 }
 
-str_t *str_from_char_ptr(char *src, uint32_t length)
+str_t *str_from_charr(char *src, uint32_t length)
 {
 	str_t *new_str = str_empty(length);
 	memcpy(str_charr(new_str), src, length);
@@ -571,7 +571,7 @@ str_t *str_from_buf(char *buf, uint32_t buf_max_size)
 	if (buf_true_size > buf_max_size)
 		ERRORF("str_from_buf: overflow detected in buffer = '%s'", buf)
 
-	str_t *new_str = str_from_char_ptr(buf, buf_true_size);
+	str_t *new_str = str_from_charr(buf, buf_true_size);
 
 	return new_str;
 }
@@ -590,7 +590,7 @@ void str_write_from_buf(str_t **dest, char *buf, uint32_t buf_max_size)
 	str_null_end((*dest));
 }
 
-void str_write_from_char_ptr(str_t **dest, char *src, uint32_t length)
+void str_write_from_charr(str_t **dest, char *src, uint32_t length)
 {
 	if((*dest)->capacity < length)
 		(*dest) = str_realloc(dest, length);
@@ -602,6 +602,6 @@ void str_write_from_char_ptr(str_t **dest, char *src, uint32_t length)
 
 void str_write_from_str(str_t **dest, str_t *src)
 {
-	str_write_from_char_ptr(dest, str_charr(src), src->length);
+	str_write_from_charr(dest, str_charr(src), src->length);
 }
 

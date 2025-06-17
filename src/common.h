@@ -228,10 +228,10 @@ char *str_charr(str_t *str);
 
 str_t *str_empty(uint32_t init_capacity);
 
-str_t *str_from_char_ptr(char *src, uint32_t length);
+str_t *str_from_charr(char *src, uint32_t length);
 	// ex: 	str_t *new_str = str_from_char_ptr(src, strlen(src));
 
-#define str(literal) str_from_char_ptr(literal, sizeof(literal))
+#define str(literal) str_from_charr(literal, sizeof(literal))
 	// ex:	str_t *new_str = str("abc");
 
 str_t *str_copy(str_t *src);
@@ -259,8 +259,8 @@ void str_write_from_buf(str_t **dest, char *buf, uint32_t buf_max_size);
 	sprintf(buf,fmt, __VA_ARGS__);									\
 	str_write_from_buf(dest, buf, buf_max_size);}
 
-void str_write_from_char_ptr(str_t **dest, char *src, uint32_t length);
+void str_write_from_charr(str_t **dest, char *src, uint32_t length);
 
 void str_write_from_str(str_t **dest, str_t *src);
 
-#define str_write(str, literal) str_write_from_char_ptr(str, literal, sizeof(literal))
+#define str_write(str, literal) str_write_from_charr(str, literal, sizeof(literal))

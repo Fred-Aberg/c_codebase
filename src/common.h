@@ -8,6 +8,7 @@
 #define WARNING(str) {fprintf(stdout, str); putc('\n', stdout);}
 #define WARNINGF(str, ...) {fprintf(stdout, str, __VA_ARGS__); putc('\n', stdout);}
 #define UNUSED(var) (void) var
+#define AS_PTR(var) (void *)var
 
 typedef struct
 {

@@ -243,6 +243,10 @@ container_t *ascui_divider(container_style_t style);
 #define ascui_dropdown_button(s_type, size, menu_text, h_align, v_align, style) \
 	ascui_button_subst(true, HOVERABLE, s_type, size, menu_text, h_align, v_align, style, ascui_dropdown_button_func, SUBST_NEXT_CNTR, SUBST_OWN_TEXT)
 
+// NOTE: empty container types do not support parameter substitutions
+// These are mainly used for growable subcontainer-sizes or for cases where subcontainers are otherwise added later
+container_t *ascui_empty_container(bool open, size_type_e s_type, uint8_t size, container_orientation_e orientation, uint16_t n_subcontainers);
+container_t *ascui_empty_box(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, container_orientation_e orientation, container_style_t style, uint16_t n_subcontainers);
 
 // Composites
 container_t *ascui_input_w_desc(bool open, size_type_e txt_s_type, uint8_t txt_size, str_t *text, uint8_t h_align, uint8_t v_align,

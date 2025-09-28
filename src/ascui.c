@@ -156,6 +156,31 @@ container_t *ascui_box(bool open, uint8_t selectability, size_type_e s_type, uin
 	return container;
 }
 
+// NOTE: does not support parameter substitutions
+container_t *ascui_empty_container(bool open, size_type_e s_type, uint8_t size, container_orientation_e orientation, uint16_t n_subcontainers)
+{
+	container_t *container = create_container_stub(open, STATIC, s_type, size, CONTAINER);
+	container->container_type_data = calloc(1, sizeof(container_data_t));
+	((container_data_t *)container->container_type_data)->orientation = orientation;
+	((container_data_t *)container->container_type_data)->n_subcontainers = n_subcontainers;
+	((container_data_t *)container->container_type_data)->subcontainers = calloc(n_subcontainers, sizeof(container_t *));
+
+	return container;
+}
+
+// NOTE: does not support parameter substitutions
+container_t *ascui_empty_box(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, container_orientation_e orientation, container_style_t style, uint16_t n_subcontainers)
+{
+	container_t *container = create_container_stub(open, selectability, s_type, size, BOX);
+	container->container_type_data = calloc(1, sizeof(box_data_t));
+	((box_data_t *)container->container_type_data)->orientation = orientation;
+	((box_data_t *)container->container_type_data)->style = style;
+	((box_data_t *)container->container_type_data)->n_subcontainers = n_subcontainers;
+	((box_data_t *)container->container_type_data)->subcontainers = calloc(n_subcontainers, sizeof(container_t *));
+
+	return container;
+}
+
 container_t *ascui_text(bool open, uint8_t selectability, size_type_e s_type, uint8_t size, str_t *text, uint8_t h_align, uint8_t v_align, container_style_t style)
 {
 	container_t *container = create_container_stub(open, selectability, s_type, size, TEXT);

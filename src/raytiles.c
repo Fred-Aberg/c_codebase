@@ -25,6 +25,8 @@ typedef struct
 	float font_size;
 	uint8_t smbl_width;
 	uint8_t smbl_height;
+	bool use_colmap;
+    Color *colmap;
 }grid_rendering_data_t;
 
 void sanitize_tile_p_w(grid_t *grid)
@@ -87,8 +89,27 @@ grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_s
 	grid->instructions_capacity = starting_instruction_capacity;
 	grid->instructions_count = 0;
     grid->instructions = calloc(starting_instruction_capacity, sizeof(instruction_t));
+
+	// No color map by default
+	grid->use_colmap = false;
+	grid->colmap = NULL;
     
     return grid;
+}
+
+void tl_load_color_map(grid_t *grid, const char *colmap_path)
+{
+	if(grid->use_colmap)
+		UnloadImageColors(grid->colmap);
+		
+	grid->use_colmap = true;
+	grid->colmap = calloc(256, sizeof(Color));
+
+	Image colmap_image = LoadImage(colmap_path);
+
+	grid->colmap = LoadImageColors(colmap_image);
+
+	UnloadImage(colmap_image);
 }
 
 pos16_t tl_grid_get_dimensions(grid_t *grid)
@@ -99,13 +120,21 @@ pos16_t tl_grid_get_dimensions(grid_t *grid)
 void tl_deinit_grid(grid_t *grid)
 {
     free(grid->instructions);
+    if(grid->use_colmap)
+    	UnloadImageColors(grid->colmap);
     free(grid);
 }
 
 void draw_rect(grid_rendering_data_t g_data, uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, color8b_t bg_col)
 {
+	Color raylib_color;
+    if(g_data.use_colmap)
+		raylib_color = g_data.colmap[bg_col];
+    else
+		raylib_color = tl_color8b_to_Color(bg_col);
+
 	DrawRectangle(g_data.offset_x + x0 * g_data.t_w, g_data.offset_y + y0 * g_data.t_h,
-				  g_data.t_w * (x1 - x0 + 1), g_data.t_h * (y1 - y0 + 1), tl_color8b_to_Color(bg_col));
+				  g_data.t_w * (x1 - x0 + 1), g_data.t_h * (y1 - y0 + 1), raylib_color);
 }
 
 #define ins_type(instruction) (instruction.type_bit & 1)
@@ -122,8 +151,12 @@ uint16_t render_smbl_instruction(grid_rendering_data_t g_data, smbl_instruction_
     uint8_t tex_map_x = smbl_instruction.smbl & 15;
     uint8_t tex_map_y = (smbl_instruction.smbl & 240) >> 4;
     Rectangle srcRec = { tex_map_x * g_data.smbl_width, tex_map_y * g_data.smbl_height, g_data.smbl_width, g_data.smbl_height };
-                         
-	Color raylib_color = tl_color8b_to_Color(smbl_instruction.smbl_col);
+
+	Color raylib_color;
+    if(g_data.use_colmap)
+		raylib_color = g_data.colmap[smbl_instruction.smbl_col];
+    else
+		raylib_color = tl_color8b_to_Color(smbl_instruction.smbl_col);
 	
 	for (uint8_t _y = smbl_instruction.rect.y0; _y <= smbl_instruction.rect.y1; _y++)
 	{
@@ -161,7 +194,9 @@ pos16_t render_instructions(grid_t *grid)
 		grid->texture_maps,
 		grid->tile_p_w * grid->font_size_multiplier,
 		grid->smbl_width,
-		grid->smbl_height
+		grid->smbl_height,
+		grid->use_colmap,
+		grid->colmap
 	};
 	instruction_t *instructions = grid->instructions;
 	instruction_t c_instruction;

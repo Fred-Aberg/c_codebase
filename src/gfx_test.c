@@ -208,6 +208,7 @@ int main(){
 
 	// Main Grid
 	grid_t *main_grid = tl_init_grid(0, 0, screensize_x, screensize_y, tile_width, 1.0f, tex_maps, 10, 10, 200);
+	tl_load_color_map(main_grid, "Resources/Color_Maps/test_colmap.png");
 	// UI
 	main_ui();
 	text_example_ui();

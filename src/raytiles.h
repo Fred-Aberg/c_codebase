@@ -56,6 +56,7 @@ typedef union
 	bg_instruction_t bg;
 }instruction_t;		// Generic type covering smbl and bg instruction types
 
+
 typedef struct
 {
 	int offset_x;
@@ -76,12 +77,17 @@ typedef struct
 	uint8_t smbl_width;
 	uint8_t smbl_height;
     Texture2D *texture_maps; // max 128 texture_maps-indexes, // Should always be of dimensions: smbl_width*16 x smbl_height*16 => 256 subtextures
+
+    bool use_colmap;
+    Color *colmap;
 } grid_t;
 
 grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_size_y, uint16_t tile_p_w, float tile_h_to_w_ratio, 
 					Texture2D *texture_maps, uint8_t smbl_width, uint8_t smbl_height, uint16_t starting_instruction_capacity);
 
 void tl_deinit_grid(grid_t *grid);
+
+void tl_load_color_map(grid_t *grid, const char *colmap_path);
 
 pos16_t tl_grid_get_dimensions(grid_t *grid);
 

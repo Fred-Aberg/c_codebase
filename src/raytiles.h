@@ -137,3 +137,18 @@ void tl_grid_set_txt_padding(grid_t *grid, float pp);
 
 void tl_print_grid_info(grid_t *grid);
 
+// Images
+/*
+	Static lists of instructions for rendering a pre-made image.
+	Cannot be altered at runtime.
+*/
+typedef struct {
+	uint8_t width;
+	uint8_t height;
+	uint32_t instruction_count;
+	instruction_t *img_instructions;
+} image_t;
+
+image_t *tl_load_image(const char *path);
+
+void tl_unload_image(image_t *img);

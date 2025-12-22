@@ -434,3 +434,26 @@ void tl_print_grid_info(grid_t *grid)
 			tile_pixel_height(grid),
 			(int)(grid->tile_p_w * grid->font_size_multiplier));
 }
+
+// Images
+
+image_t *tl_load_image(const char *path)
+{
+	if(!FileExists(path)) 
+		{WARNINGF("WARNING: Could not find file: %s\n", path); return NULL;}
+
+	int size;
+	uint8_t *data = LoadFileData(path, &size);
+	
+	if(data == NULL)
+		{WARNINGF("WARNING: Could not open file: %s\n", path); return NULL;}
+
+	
+	
+	image_t *img = calloc(1, sizeof(image_t))
+}
+
+void tl_unload_image(image_t *img)
+{
+	
+}

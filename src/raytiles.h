@@ -16,7 +16,7 @@
 
 typedef uint8_t color8b_t;
 
-color8b_t col8bt(char r, char b, char g);
+color8b_t col8bt(char r, char g, char b);
 
 Color tl_color8b_to_Color(color8b_t col);
 
@@ -149,6 +149,6 @@ typedef struct {
 	instruction_t *img_instructions;
 } image_t;
 
-image_t *tl_load_image(const char *path);
-
-void tl_unload_image(image_t *img);
+// image_t *tl_load_image(const char *path);
+// 
+// void tl_unload_image(image_t *img);

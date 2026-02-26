@@ -1,5 +1,6 @@
 #include <raylib.h>
 #include "raytiles.h"
+#include "common.h"
 #include "math.h"
 #include "stdio.h"
 #include "assert.h"
@@ -40,7 +41,7 @@ void sanitize_tile_p_w(grid_t *grid)
 	int min_p_w_x = (grid->on_scr_size_x / MAX_GRID_W) + 1;
 	int min_p_w_y = ((grid->on_scr_size_y / MAX_GRID_H) / grid->tile_h_to_w_ratio) + 1;
 
-	grid->tile_p_w = max(min_p_w_x, min_p_w_y);
+	grid->tile_p_w = MAX(min_p_w_x, min_p_w_y);
 }
 
 // r <= 7, g <= 7, b <= 3, otherwise undefined behaviour
@@ -64,7 +65,7 @@ color8b_t tl_Color_to_color8b(Color col)
 	return ( (char)(((float)col.r/255.0f) * 7.0f)<<5 ) + ( (char)(((float)col.g/255.0f) * 7.0f)<<2 ) + ( (char)(((float)col.b/255.0f) * 3.0f) );
 }
 
-grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_size_y, uint16_t tile_p_w, float tile_h_to_w_ratio, 
+grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_size_y, uint16_t tile_p_w, float tile_h_to_w_ratio,
 					Texture2D *texture_maps, uint8_t smbl_width, uint8_t smbl_height, uint16_t starting_instruction_capacity)
 {
     grid_t *grid = calloc(1, sizeof(grid_t));
@@ -77,10 +78,10 @@ grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_s
 	grid->tile_h_to_w_ratio = tile_h_to_w_ratio;
 
 	sanitize_tile_p_w(grid);
-	
+
 	grid->txt_padding_prc_h = 0.15f;  // 15% padding by default
 	grid->txt_padding_prc_v = 0.0f;  // 0% padding by default
-	grid->font_size_multiplier = 1.0f; // 100% 
+	grid->font_size_multiplier = 1.0f; // 100%
 
 	grid->texture_maps = texture_maps;
 	grid->smbl_width = smbl_width;
@@ -93,7 +94,7 @@ grid_t *tl_init_grid(int offset_x, int offset_y, int on_scr_size_x, int on_scr_s
 	// No color map by default
 	grid->use_colmap = false;
 	grid->colmap = NULL;
-    
+
     return grid;
 }
 
@@ -101,7 +102,7 @@ void tl_load_color_map(grid_t *grid, const char *colmap_path)
 {
 	if(grid->use_colmap)
 		UnloadImageColors(grid->colmap);
-		
+
 	grid->use_colmap = true;
 	grid->colmap = calloc(256, sizeof(Color));
 
@@ -144,9 +145,9 @@ uint16_t render_smbl_instruction(grid_rendering_data_t g_data, smbl_instruction_
 {
 	uint16_t draw_calls = 0;
 	Vector2 position = (Vector2){};
-	
+
 	Texture2D texture_map = g_data.g_tex_maps[tex_map_index(smbl_instruction)];
-	
+
     // Symbol source rectangle from font texture atlas
     uint8_t tex_map_x = smbl_instruction.smbl & 15;
     uint8_t tex_map_y = (smbl_instruction.smbl & 240) >> 4;
@@ -157,32 +158,32 @@ uint16_t render_smbl_instruction(grid_rendering_data_t g_data, smbl_instruction_
 		raylib_color = g_data.colmap[smbl_instruction.smbl_col];
     else
 		raylib_color = tl_color8b_to_Color(smbl_instruction.smbl_col);
-	
+
 	for (uint8_t _y = smbl_instruction.rect.y0; _y <= smbl_instruction.rect.y1; _y++)
 	{
 		for (uint8_t _x = smbl_instruction.rect.x0; _x <= smbl_instruction.rect.x1; _x++)
 		{
 
 			position = (Vector2){g_data.offset_x + _x * g_data.t_w, g_data.offset_y + _y * g_data.t_h};
-		
+
 			// Character destination rectangle on screen
 		    Rectangle dstRec = { position.x, position.y, g_data.t_w, g_data.t_h };
-		
-		
+
+
 		    // Draw the character texture on the screen
 		    DrawTexturePro(texture_map, srcRec, dstRec, (Vector2){ 0, 0 }, 0.0f, raylib_color);
-		
+
 			draw_calls++;
 		}
 	}
-		
+
 	return draw_calls;
 }
 
 pos16_t render_instructions(grid_t *grid)
 {
 	pos16_t draw_calls = pos16(0,0);
-	
+
 	grid_rendering_data_t g_data =
 	{
 		grid_width(grid),
@@ -200,13 +201,13 @@ pos16_t render_instructions(grid_t *grid)
 	};
 	instruction_t *instructions = grid->instructions;
 	instruction_t c_instruction;
-	
+
 	for (uint16_t i = 0; i < grid->instructions_count; i++)
 	{
 		c_instruction = instructions[i];
 		if(ins_type(c_instruction))
 		{
-			draw_rect(g_data, c_instruction.bg.rect.x0, c_instruction.bg.rect.y0,  c_instruction.bg.rect.x1, c_instruction.bg.rect.y1, 
+			draw_rect(g_data, c_instruction.bg.rect.x0, c_instruction.bg.rect.y0,  c_instruction.bg.rect.x1, c_instruction.bg.rect.y1,
 						c_instruction.bg.bg_col);
 			draw_calls.x++;
 		}
@@ -214,7 +215,7 @@ pos16_t render_instructions(grid_t *grid)
 		{
 			draw_calls.y += render_smbl_instruction(g_data, c_instruction.smbl);
 		}
-	}	
+	}
 	return draw_calls;
 }
 
@@ -299,7 +300,7 @@ smbl_instruction_t *add_smbl_instruction(grid_t *grid, uint8_t x0, uint8_t y0, u
 	check_realloc(grid);
 	char type_and_font_bits = (char)SMBL | (font << 1);
 
-	
+
 	smbl_instruction_t new_smbl_instruction = (smbl_instruction_t){type_and_font_bits, smbl, smbl_col, r(x0, y0, x1, y1)};
 
 	smbl_instruction_t *smbl_loc = (smbl_instruction_t *)&grid->instructions[grid->instructions_count];
@@ -380,7 +381,7 @@ void tl_draw_line_non_orthogonal(grid_t *grid, uint8_t x0, uint8_t y0, uint8_t x
     int dy = -abs(y1 - y0);
     int sy = (y0 < y1)? 1 : -1;
     int error = dx + dy;
-    
+
     while (true)
     {
     	if(scenario == 0)
@@ -394,7 +395,7 @@ void tl_draw_line_non_orthogonal(grid_t *grid, uint8_t x0, uint8_t y0, uint8_t x
     		add_smbl_instruction(grid,  x0,  y0,  x0,  y0, tex_map, symbol, char_col);
 
         if (x0 == x1 && y0 == y1) break;
-        
+
         int e2 = 2 * error;
 
         if (e2 >= dy)
@@ -414,8 +415,8 @@ void tl_draw_line_non_orthogonal(grid_t *grid, uint8_t x0, uint8_t y0, uint8_t x
 
 pos16_t tl_screen_to_grid_coords(grid_t *grid, pos16_t xy)
 {
-	xy.x = uclamp(grid->offset_x, xy.x, grid->offset_x + grid->on_scr_size_x);
-	xy.y = uclamp(grid->offset_y, xy.y, grid->offset_y + grid->on_scr_size_y);
+	xy.x = CLAMP(grid->offset_x, xy.x, grid->offset_x + grid->on_scr_size_x);
+	xy.y = CLAMP(grid->offset_y, xy.y, grid->offset_y + grid->on_scr_size_y);
 
     return pos16((xy.x - grid->offset_x) / grid->tile_p_w, (xy.y - grid->offset_y) / tile_pixel_height(grid));
 }
@@ -436,24 +437,25 @@ void tl_print_grid_info(grid_t *grid)
 }
 
 // Images
-
+/*
 image_t *tl_load_image(const char *path)
 {
-	if(!FileExists(path)) 
+	if(!FileExists(path))
 		{WARNINGF("WARNING: Could not find file: %s\n", path); return NULL;}
 
 	int size;
 	uint8_t *data = LoadFileData(path, &size);
-	
+
 	if(data == NULL)
 		{WARNINGF("WARNING: Could not open file: %s\n", path); return NULL;}
 
-	
-	
+
+
 	image_t *img = calloc(1, sizeof(image_t))
 }
 
 void tl_unload_image(image_t *img)
 {
-	
+
 }
+*/

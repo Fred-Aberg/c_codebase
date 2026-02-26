@@ -37,7 +37,8 @@ typedef enum
 	TOGGLE,
 	DISPLAY,
 	SLIDER,
-	DIVIDER
+	DIVIDER,
+	VOID
 }container_type_e;
 
 typedef enum
@@ -195,6 +196,12 @@ typedef struct
 
 typedef struct
 {
+	pos8_t p0;
+	pos8_t p1;
+}void_data_t;
+
+typedef struct
+{
 	container_t *top_container;
 	uint16_t binding_capacity;
 	var_binding_t *var_bindings;
@@ -239,6 +246,8 @@ container_t *ascui_display(bool open, uint8_t selectability, size_type_e s_type,
 							uint8_t h_align, uint8_t v_align, container_style_t style);
 
 container_t *ascui_divider(container_style_t style);
+
+container_t *ascui_void(uint8_t selectability, size_type_e s_type, uint8_t size);
 
 #define ascui_dropdown_button(s_type, size, menu_text, h_align, v_align, style) \
 	ascui_button_subst(true, HOVERABLE, s_type, size, menu_text, h_align, v_align, style, ascui_dropdown_button_func, SUBST_NEXT_CNTR, SUBST_OWN_TEXT)
@@ -292,6 +301,8 @@ toggle_data_t *ascui_get_toggle_data(container_t *container);
 display_data_t *ascui_get_display_data(container_t *container);
 
 divider_data_t *ascui_get_divider_data(container_t *container);
+
+void_data_t *ascui_get_void_data(container_t *container);
 
 void ascui_set_nth_subcontainer(container_t *container, uint16_t n, container_t *subcontainer);
 

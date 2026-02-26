@@ -1,14 +1,18 @@
 #pragma once
-#include "stdlib.h"
-#include "stdint.h"
-#include "stdbool.h"
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
 
-#define ERROR(str) {fprintf(stdout, str); putc('\n', stdout); fflush(stdout); assert(0);}
-#define ERRORF(str, ...) {fprintf(stdout, str, __VA_ARGS__); putc('\n', stdout); fflush(stdout); assert(0);}
-#define WARNING(str) {fprintf(stdout, str); putc('\n', stdout);}
-#define WARNINGF(str, ...) {fprintf(stdout, str, __VA_ARGS__); putc('\n', stdout);}
+#define ERROR(str) {fprintf(stdout, "ERROR: %s/%s() l:%d: ",__FILE__, __func__, __LINE__); fprintf(stdout, str); putc('\n', stdout); fflush(stdout); assert(0);}
+#define ERRORF(str, ...) {fprintf(stdout, "ERROR: %s/%s() l:%d: ",__FILE__, __func__, __LINE__); fprintf(stdout, str, __VA_ARGS__); putc('\n', stdout); fflush(stdout); assert(0);}
+#define WARNING(str) {fprintf(stdout, "WARNING: %s/%s() l:%d: ",__FILE__, __func__, __LINE__); fprintf(stdout, str); putc('\n', stdout);}
+#define WARNINGF(str, ...) {fprintf(stdout, "WARNING: %s/%s() l:%d: ",__FILE__, __func__, __LINE__); fprintf(stdout, str, __VA_ARGS__); putc('\n', stdout);}
 #define UNUSED(var) (void) var
 #define AS_PTR(var) (void *)var
+
+#define MIN(a, b) ((a) < (b))? (a) : (b)
+#define MAX(a, b) ((a) > (b))? (a) : (b)
+#define CLAMP(minv, x, maxv) MIN(maxv, MAX(minv, x))
 
 typedef struct
 {
@@ -28,22 +32,22 @@ typedef struct
 #define pos8(x, y) (pos8_t){x, y}
 #define pos16(x, y) (pos16_t){x, y}
 
-uint16_t umin(uint16_t a, uint16_t b);
+uint16_t umin16(uint16_t a, uint16_t b);
+uint16_t umax16(uint16_t a, uint16_t b);
+uint16_t uclamp16(uint16_t min, uint16_t x, uint16_t max);
+int16_t min16(int16_t a, int16_t b);
+int16_t max16(int16_t a, int16_t b);
+int16_t clamp16(int16_t minv, int16_t x, int16_t maxv);
 
-uint16_t umax(uint16_t a, uint16_t b);
-
-uint16_t uclamp(uint16_t min, uint16_t x, uint16_t max);
-
-int16_t min(int16_t a, int16_t b);
-
-int16_t max(int16_t a, int16_t b);
-
-int16_t clamp(int16_t minv, int16_t x, int16_t maxv);
+uint32_t umin32(uint32_t a, uint32_t b);
+uint32_t umax32(uint32_t a, uint32_t b);
+uint32_t uclamp32(uint32_t min, uint32_t x, uint32_t max);
+int32_t min32(int32_t a, int32_t b);
+int32_t max32(int32_t a, int32_t b);
+int32_t clamp32(int32_t minv, int32_t x, int32_t maxv);
 
 float flmin(float a, float b);
-
 float flmax(float a, float b);
-
 float flclamp(float minv, float x, float maxv);
 
 /// ARRAYS
@@ -182,15 +186,15 @@ void ptr_list_remove(ptr_list_t *list, uint32_t index);
 /// STRINGS
 
 // Always owns its own array of chars
-// A string's length shall always include a null-terminator 
+// A string's length shall always include a null-terminator
 //		=> (&str->c)[length - 1] = '\0', (&str->c)[length] => illegal access.
 
-// A string's length is never 0, the smallest string is "" with length: 1 
+// A string's length is never 0, the smallest string is "" with length: 1
 	//	ex. str 	|	length	|	array
 	//		""		|	1		|	{'\0'}
 	//		"a"		|	2 		|	{'a','\0'}
 	//		"abc"	|	4		|	{'a', 'b', 'c', '\0'}
- 
+
 typedef struct
 {
 	uint32_t length;
@@ -236,18 +240,18 @@ str_t *str_from_charr(char *src, uint32_t length);
 	// ex:	str_t *new_str = str("abc");
 
 str_t *str_copy(str_t *src);
-	
+
 str_t *str_from_buf(char *buf, uint32_t buf_max_size);
 	// ex: 	char buf[256];								: buffer *theoretically* large enough to hold sprintf output
-	//	 	sprintf(buf, fmt, vars);			
+	//	 	sprintf(buf, fmt, vars);
 	//	 	str_t *new_str = str_from_buf(buf, 256);	: will throw an error if buf isn't nulled (which implies overflow)
 
 
 void str_write_from_buf(str_t **dest, char *buf, uint32_t buf_max_size);
 	// ex: 	char buf[256];								: buffer *theoretically* large enough to hold sprintf output
-	//	 	sprintf(buf, fmt, vars);			
+	//	 	sprintf(buf, fmt, vars);
 	//	 	str_write_from_buf(str, buf, 256);			: will throw an error if buf isn't nulled (which implies overflow)
-	
+
 #define str_write_from_sprintf(buf_max_size, dest, fmt, ...)		\
 	{char buf[buf_max_size];										\
 	buf[buf_max_size - 1] = 0;										\
@@ -265,3 +269,48 @@ void str_write_from_charr(str_t **dest, char *src, uint32_t length);
 void str_write_from_str(str_t **dest, str_t *src);
 
 #define str_write(str, literal) str_write_from_charr(str, literal, sizeof(literal))
+
+/// MEMORY GRIDS ///
+
+// Optimal iteration: for m {for n {g[m][n] = ...}} / for x {for y {g[x][y] = ...}}
+void **allocate_memory_grid(uint32_t m, uint32_t n, uint32_t elem_size);
+
+void ***allocate_memory_cube(uint32_t i, uint32_t j, uint32_t k, uint32_t elem_size);
+
+/// SMART (& DYNAMIC) ARRAYS ///
+//https://www.youtube.com/watch?v=L4xOCvELWlU
+typedef struct
+{
+	uint16_t elem_size;
+	uint32_t count;
+	uint32_t id_loc_count;
+	uint32_t cap;
+	void *data;
+	uint32_t *data_id;
+	uint32_t *data_loc;
+}smarray_t;
+
+smarray_t *	smarray_create(uint16_t elem_size, uint32_t init_cap);
+
+uint32_t 	smarray_add(smarray_t *smarr, void *new_data_ptr);
+
+// If smarr contains ptrs, contents this ptr points to must be freed before removal.
+// Remove data in ID-order
+void		smarray_rem(smarray_t *smarr, uint32_t id);
+
+// Get data in ID-order
+void *		smarray_get(smarray_t *smarr, uint32_t id);
+
+// Set data in ID-order
+void 		smarray_set(smarray_t *smarr, uint32_t id, void *new_data_ptr);
+
+// Get data in memory-order
+void *		smarray_iter_get(smarray_t *smarr, uint32_t data_num);
+
+// Set data in memory-order
+void 		smarray_iter_set(smarray_t *smarr, uint32_t data_num, void *new_data_ptr);
+
+// If smarr contains ptrs, contents this ptr points to must be freed before removal.
+// Remove data in ID-order
+// Returns ID of removed element
+uint32_t    smarray_iter_rem(smarray_t *smarr, uint32_t data_num);

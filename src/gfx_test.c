@@ -16,7 +16,7 @@ void dropdown_button(void *domain, void *function_data, cursor_t *cursor)
 	UNUSED(function_data);
 	if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
 		return;
-	container_t *container = (container_t *)domain; 
+	container_t *container = (container_t *)domain;
 	container->open = !container->open;
 }
 
@@ -28,7 +28,7 @@ void navigate_button(void *domain, void *function_data, cursor_t *cursor)
 	UNUSED(function_data);
 	if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
 		return;
-	c_ctx = *(context_t **)domain; 
+	c_ctx = *(context_t **)domain;
 }
 
 uint8_t global_int = 15;
@@ -41,17 +41,19 @@ context_t *input_ctx;
 
 
 container_t *subgrid_container;
+container_t *void_container;
 
 void main_ui()
 {
-	
+
 	container_style_t s_0 = style(0, col8bt(0,0,0), col8bt(5,0,2), col8bt(7,7,3), 134, 133, 135);
 	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), 134, 133, 135);
 	main_ctx = ascui_context(0,
 		ascui_container(true, PERCENTAGE, 100, VERTICAL, 1,
-			ascui_box(true, HOVERABLE, TILES, 1, HORIZONTAL, s_0, 3, 
+			ascui_box(true, HOVERABLE, TILES, 1, HORIZONTAL, s_0, 4,
 				ascui_button(true, HOVERABLE, TILES, 3, str("Text Examples >"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &text_ctx, NULL),
 				ascui_button(true, HOVERABLE, TILES, 3, str("Input Examples >"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &input_ctx, NULL),
+				void_container = ascui_void(HOVERABLE, TILES, 9),
 				ascui_divider(s_1)
 			)
 		)
@@ -71,11 +73,11 @@ void text_example_ui()
 	container_style_t s_text = style(0, col8bt(4,0,2), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
 
 	text_ctx = ascui_context(2, NULL); // Create context
-	
+
 	// Add variable bindings before containers because of param. execution sequencing not necessarily being from left to right
 	text_index_binding = ascui_add_context_var_binding(text_ctx, &txt_index, U8_INT);
 	text_ptr_binding = ascui_add_context_var_binding(text_ctx, example_strings[0], STRING);
-	
+
 	text_ctx->top_container = ascui_box(true, HOVERABLE, PERCENTAGE, 100, HORIZONTAL, s_1, 14,
 		ascui_container(true, TILES, 3, VERTICAL, 4,
 			ascui_button(true, HOVERABLE, TILES, 7, str("< BACK"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &main_ctx, NULL),
@@ -83,7 +85,7 @@ void text_example_ui()
 			ascui_text(true, STATIC, TILES, 15, str("TEXT EXAMPLES"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_title),
 			ascui_input_w_desc(true, TILES, 8, str(" TXT: "), ALIGN_RIGHT, ALIGN_MIDDLE, TILES, 1, s_1, 0, N_STRINGS - 1, text_index_binding)
 		),
-		
+
 		ascui_divider(s_1),
 		ascui_container(true, TILES, 7, VERTICAL, 2,
 			ascui_text(true, STATIC, TILES, 17, str("h:LEFT-v:TOP"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
@@ -97,7 +99,7 @@ void text_example_ui()
 			ascui_text(true, STATIC, TILES, 17, str("h:RIGHT-v:TOP"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
 			ascui_display(true, HOVERABLE, TILES, 1, str("%s"), text_ptr_binding, ALIGN_RIGHT, ALIGN_TOP, s_text)
 		),
-		
+
 		ascui_divider(s_1),
 		ascui_container(true, TILES, 7, VERTICAL, 2,
 			ascui_text(true, STATIC, TILES, 17, str("h:LEFT-v:MIDDLE"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_desc),
@@ -137,7 +139,7 @@ float example_float = 0.0f;
 
 void input_example_ui()
 {
-	
+
 	container_style_t s_1 = style(1, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), 134, 133, 135);
 	container_style_t s_title = style(1, col8bt(4,0,2), col8bt(2,0,1), col8bt(0,0,0), '-', '|', 'O');
 	container_style_t s_desc = style(0, col8bt(2,0,1), col8bt(2,0,1), col8bt(7,7,3), '-', '|', 'O');
@@ -152,7 +154,7 @@ void input_example_ui()
 	var_binding_t *int_binding = ascui_add_context_var_binding(input_ctx, &example_int, S8_INT);
 	var_binding_t *float_binding = ascui_add_context_var_binding(input_ctx, &example_float, FLOAT);
 
-	input_ctx->top_container = 
+	input_ctx->top_container =
 	ascui_box(true, HOVERABLE, PERCENTAGE, 100, HORIZONTAL, s_1, 14,
 		ascui_container(true, TILES, 3, VERTICAL, 3,
 			ascui_button(true, HOVERABLE, TILES, 7, str("< BACK"), ALIGN_MIDDLE, ALIGN_MIDDLE, s_1, navigate_button, &main_ctx, NULL),
@@ -201,25 +203,25 @@ int main(){
 
     InitWindow(screensize_x, screensize_y, "c_codebase Test Suite");
 	Texture2D tex_maps[2] = {LoadTexture("Resources/Fonts/font_base.png"), LoadTexture("Resources/Fonts/font_base.png")};
-    
+
     SetTargetFPS(60);
     HideCursor();
     SetWindowMinSize(200, 200);
 
 	// Main Grid
 	grid_t *main_grid = tl_init_grid(0, 0, screensize_x, screensize_y, tile_width, 1.0f, tex_maps, 10, 10, 200);
-	tl_load_color_map(main_grid, "Resources/Color_Maps/test_colmap.png");
+	//tl_load_color_map(main_grid, "Resources/Color_Maps/test_colmap.png");
 	// UI
 	main_ui();
 	text_example_ui();
 	input_example_ui();
-	cursor_t cursor; 
+	cursor_t cursor;
 	ascui_print_ui(main_ctx->top_container);
 	ascui_print_ui(text_ctx->top_container);
 	ascui_print_ui(input_ctx->top_container);
 
 	c_ctx = main_ctx;
-	
+
     while (!WindowShouldClose())
     {
     	text_ptr_binding->var = example_strings[*(uint8_t *)text_index_binding->var];
@@ -229,20 +231,17 @@ int main(){
 
         BeginDrawing();
         ClearBackground(BLACK);
-        
+
 		ascui_run_ui(main_grid, c_ctx, &ascui_drawing_time, NULL, NULL, 45, 47, &cursor);
 
-		// printf("\nhov=[%p] sel[%p]", cursor.hovered_container, cursor.selected_container);
+		if(c_ctx == main_ctx)
+		{
+			tl_plot_bg(main_grid, ascui_get_void_data(void_container)->p0.x, ascui_get_void_data(void_container)->p0.y, col8bt(7, 1, 0));
+			tl_plot_bg(main_grid, ascui_get_void_data(void_container)->p0.x, ascui_get_void_data(void_container)->p1.y, col8bt(7, 1, 0));
+			tl_plot_bg(main_grid, ascui_get_void_data(void_container)->p1.x, ascui_get_void_data(void_container)->p0.y, col8bt(7, 1, 0));
+			tl_plot_bg(main_grid, ascui_get_void_data(void_container)->p1.x, ascui_get_void_data(void_container)->p1.y, col8bt(7, 1, 0));
+		}
 
-		// pos16_t subgrid_size = tl_grid_get_dimensions(subgrid);
-		// tl_draw_rect_smbl_w_bg(subgrid, 0, 0, subgrid_size.x - 1, subgrid_size.y - 1, '.', col8bt(5, 1, 2), col8bt(3, 0, 1), 1);
-
-		// if(cursor.hovered_container == subgrid_container)
-		// {
-			// mouse_subgrid_pos = tl_screen_to_grid_coords(subgrid, pos16(GetMouseX(), GetMouseY()));
-			// tl_plot_smbl_w_bg(subgrid, mouse_subgrid_pos.x, mouse_subgrid_pos.y, 'A', WHITE8B, BLACK8B, 1);
-		// }
-		// else
 		tl_plot_smbl(main_grid, cursor.x, cursor.y, 31, WHITE8B, 0);
 
 		tl_rendering_time = -GetTime();
@@ -262,7 +261,7 @@ int main(){
 		char buf[100];
 		if(IsKeyPressed(KEY_TAB))
 			show_diagnostics = !show_diagnostics;
-		
+
 		if (show_diagnostics)
 		{
 			DrawRectangle(0,0, 350, 550, c(40, 10, 40));

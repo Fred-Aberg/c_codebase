@@ -115,15 +115,7 @@ void str_writing()
 	free(str_2);
 }
 
-void print_array(uint32_t *arr, uint32_t len)
-{
-    putchar('\n');
-    for (uint32_t i = 0; i < len; i++) {
-        printf("%u ", arr[i]);
-    }
-}
-
-void print_smarray32(smarray_t *sa)
+void print_reg32(reg_t *sa)
 {
     return;
     putchar('\n');
@@ -151,49 +143,49 @@ void print_smarray32(smarray_t *sa)
 
 void smarray_baba()
 {
-    smarray_t *sa = smarray_create(sizeof(uint32_t), 5);
+    reg_t *sa = reg_create(sizeof(uint32_t), 5);
 
     for (uint32_t i = 0; i < 10; i++)
     {
-        smarray_add(sa, &i);            // ID = 0 -> val = 0
-        print_smarray32(sa);
+        reg_add(sa, &i);            // ID = 0 -> val = 0
+        print_reg32(sa);
     }
 
-    print_smarray32(sa);
+    print_reg32(sa);
 
-    smarray_rem(sa, 8);
-    print_smarray32(sa);
-    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)smarray_get(sa, 9), 9);
-    smarray_rem(sa, 2);
-    print_smarray32(sa);
-    smarray_rem(sa, 1);
+    reg_rem(sa, 8);
+    print_reg32(sa);
+    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)reg_get(sa, 9), 9);
+    reg_rem(sa, 2);
+    print_reg32(sa);
+    reg_rem(sa, 1);
 
-    print_smarray32(sa);
+    print_reg32(sa);
 
-    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)smarray_get(sa, 0), 0);
-    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)smarray_get(sa, 3), 3);
-    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)smarray_get(sa, 4), 4);
-    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)smarray_get(sa, 5), 5);
-    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)smarray_get(sa, 6), 6);
-    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)smarray_get(sa, 7), 7);
-    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)smarray_get(sa, 9), 9);
+    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)reg_get(sa, 0), 0);
+    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)reg_get(sa, 3), 3);
+    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)reg_get(sa, 4), 4);
+    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)reg_get(sa, 5), 5);
+    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)reg_get(sa, 6), 6);
+    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)reg_get(sa, 7), 7);
+    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)reg_get(sa, 9), 9);
 
     return; // All remaining tests should generate errors
-    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)smarray_get(sa, 1), 1);     // Deleted
-    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)smarray_get(sa, 2), 2);     // Deleted
-    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)smarray_get(sa, 8), 8);     // Deleted
-    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)smarray_get(sa, 10), 10);   // Overflow
+    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)reg_get(sa, 1), 1);     // Deleted
+    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)reg_get(sa, 2), 2);     // Deleted
+    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)reg_get(sa, 8), 8);     // Deleted
+    TEST_ASSERT_EQUAL_UINT(*(uint32_t *)reg_get(sa, 10), 10);   // Overflow
 }
 
 void smarray_shenanigans()
 {
-    smarray_t *sa = smarray_create(sizeof(uint32_t), 5);
+    reg_t *sa = reg_create(sizeof(uint32_t), 5);
     uint32_t id;
 
     // Add one million elements
     for (uint32_t i = 0; i < 1e6; i++)
     {
-        id = smarray_add(sa, &i);
+        id = reg_add(sa, &i);
         TEST_ASSERT_EQUAL_INT(id, i);
     }
 
@@ -202,13 +194,13 @@ void smarray_shenanigans()
     for (uint32_t i = 0; i < 1e3; i++)
     {
         data_num_to_remove = GetRandomValue(0, 1e5);
-        smarray_iter_rem(sa, data_num_to_remove);
+        reg_iter_rem(sa, data_num_to_remove);
     }
 
     uint32_t *val;
     for (uint32_t i = 0; i < sa->count; i++)
     {
-        val = (uint32_t *)smarray_iter_get(sa, i);
+        val = (uint32_t *)reg_iter_get(sa, i);
         id = sa->data_id[i];
         TEST_ASSERT_EQUAL_INT(id, *val);
     }

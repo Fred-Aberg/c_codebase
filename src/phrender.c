@@ -8,7 +8,7 @@
 typedef struct
 {
     uint8_t  resize_mode;
-    pos8_t   pxl_offsets;
+    pos16_t   pxl_offsets;
     uint16_t width;
     uint16_t height;
     uint16_t tile_pxl_size;
@@ -103,7 +103,7 @@ void ph_zoom(int16_t zoom_amount)
 }
 
 
-void ph_set_offsets(pos8_t offsets)
+void ph_set_offsets(pos16_t offsets)
 {
     G->pxl_offsets = offsets;
 }

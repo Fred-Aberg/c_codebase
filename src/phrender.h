@@ -34,7 +34,7 @@ uint16_t ph_get_grid_tile_size();
 
 void ph_check_resize();
 void ph_center_grid();
-void ph_set_offsets(pos8_t offsets);
+void ph_set_offsets(pos16_t offsets);
 
 void ph_place_textureX(texmap_t tmap, pos16_t tpos, pos16_t pos, col_t col, pos16_t pixel_offset);
 void ph_place_texture(texmap_t tmap, pos16_t tpos, pos16_t pos, col_t col);

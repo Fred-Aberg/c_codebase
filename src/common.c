@@ -4,6 +4,7 @@
 #include "string.h"
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 uint16_t umin16(uint16_t a, uint16_t b) { return (a < b)? a : b; }
 uint16_t umax16(uint16_t a, uint16_t b) { return (a < b)? b : a; }
@@ -612,118 +613,118 @@ void ***allocate_memory_cube(uint32_t i, uint32_t j, uint32_t k, uint32_t elem_s
 }
 */
 
-smarray_t *smarray_create(uint16_t elem_size, uint32_t init_cap)
+reg_t *reg_create(uint16_t elem_size, uint32_t init_cap)
 {
-	smarray_t *smarr = calloc(1, sizeof(smarray_t));
-	smarr->elem_size = elem_size;
-	smarr->data = 		calloc(init_cap, elem_size);
-	smarr->data_loc = 	calloc(init_cap, sizeof(uint32_t));
-	smarr->data_id = 	calloc(init_cap, sizeof(uint32_t));
+	reg_t *reg = calloc(1, sizeof(reg_t));
+	reg->elem_size = elem_size;
+	reg->data = 		calloc(init_cap, elem_size);
+	reg->data_loc = 	calloc(init_cap, sizeof(uint32_t));
+	reg->data_id = 	calloc(init_cap, sizeof(uint32_t));
 
 	for (uint32_t i = 0; i < init_cap; i++)
 	{
-		smarr->data_loc[i] = i;
-		smarr->data_id[i] = i;
+		reg->data_loc[i] = i;
+		reg->data_id[i] = i;
 	}
 
-	return smarr;
+	return reg;
 }
 
-uint32_t smarray_add(smarray_t *smarr, void *new_data_ptr)
+uint32_t reg_add(reg_t *reg, void *new_data_ptr)
 {
-	smarr->count++;
+	reg->count++;
 
-	if (smarr->cap <= smarr->count)
+	if (reg->cap <= reg->count)
 	{
-		smarr->cap = smarr->cap * 1.5f + 1;
-		smarr->data = 		realloc(smarr->data, smarr->cap * smarr->elem_size);
-		smarr->data_id = 	realloc(smarr->data_id, smarr->cap * sizeof(uint32_t));
-		smarr->data_loc = 	realloc(smarr->data_loc, smarr->cap * sizeof(uint32_t));
+		reg->cap = reg->cap * 1.5f + 1;
+		reg->data = 		realloc(reg->data, reg->cap * reg->elem_size);
+		reg->data_id = 	realloc(reg->data_id, reg->cap * sizeof(uint32_t));
+		reg->data_loc = 	realloc(reg->data_loc, reg->cap * sizeof(uint32_t));
 	}
 
-	memcpy(smarr->data + smarr->elem_size * (smarr->count - 1), new_data_ptr, smarr->elem_size);
-	if(smarr->id_loc_count < smarr->count)
+	memcpy(reg->data + reg->elem_size * (reg->count - 1), new_data_ptr, reg->elem_size);
+	if(reg->id_loc_count < reg->count)
 	{
-        smarr->id_loc_count++;
-        smarr->data_id[smarr->count - 1] =  smarr->count - 1;
-        smarr->data_loc[smarr->count - 1] =	smarr->count - 1;
+        reg->id_loc_count++;
+        reg->data_id[reg->count - 1] =  reg->count - 1;
+        reg->data_loc[reg->count - 1] =	reg->count - 1;
 	}
 
-	return smarr->count - 1;
+	return reg->count - 1;
 }
 
 // If smarr contains ptrs, contents this ptr points to must be freed before removal.
-void smarray_rem(smarray_t *smarr, uint32_t id)
+void reg_rem(reg_t *reg, uint32_t id)
 {
-    if (smarr->id_loc_count <= id)
-        ERRORF("ID overflow: id_loc_count=%u <= id=%u\n", smarr->id_loc_count, id);
-	if (smarr->count <= smarr->data_loc[id])
-		ERRORF("Item has been removed: count=%u <= data_loc[id=%u]=%u\n", smarr->count, id, smarr->data_loc[id]);
+    if (reg->id_loc_count <= id)
+        ERRORF("ID overflow: id_loc_count=%u <= id=%u\n", reg->id_loc_count, id);
+	if (reg->count <= reg->data_loc[id])
+		ERRORF("Item has been removed: count=%u <= data_loc[id=%u]=%u\n", reg->count, id, reg->data_loc[id]);
 
     // Overwrite element to be removed with the last element
-    void *last_elem =       smarr->data + (smarr->elem_size * (smarr->count - 1));
-    void *elem_to_remove =  smarr->data + smarr->elem_size * smarr->data_loc[id];
-    memcpy(elem_to_remove, last_elem, smarr->elem_size);
+    void *last_elem =       reg->data + (reg->elem_size * (reg->count - 1));
+    void *elem_to_remove =  reg->data + reg->elem_size * reg->data_loc[id];
+    memcpy(elem_to_remove, last_elem, reg->elem_size);
 
     // Swap IDs
-    uint32_t last_elem_id =         smarr->data_id[smarr->count - 1];
-    uint32_t elem_to_remove_id =    smarr->data_id[smarr->data_loc[id]];
-    smarr->data_id[smarr->count - 1] =      elem_to_remove_id;
-    smarr->data_id[smarr->data_loc[id]] =   last_elem_id;
+    uint32_t last_elem_id =         reg->data_id[reg->count - 1];
+    uint32_t elem_to_remove_id =    reg->data_id[reg->data_loc[id]];
+    reg->data_id[reg->count - 1] =      elem_to_remove_id;
+    reg->data_id[reg->data_loc[id]] =   last_elem_id;
 
     // Swap Locations
-    uint32_t elem_to_remove_loc = smarr->data_loc[id];
-    smarr->data_loc[last_elem_id] = elem_to_remove_loc;
-    smarr->data_loc[id] = last_elem_id;
+    uint32_t elem_to_remove_loc = reg->data_loc[id];
+    reg->data_loc[last_elem_id] = elem_to_remove_loc;
+    reg->data_loc[id] = last_elem_id;
 
-    smarr->count--;
+    reg->count--;
 }
 
-void *smarray_get(smarray_t *smarr, uint32_t id)
+void *reg_get(reg_t *reg, uint32_t id)
 {
-    if (smarr->id_loc_count <= id)
-        ERRORF("ID overflow: id_loc_count=%u <= id=%u\n", smarr->id_loc_count, id);
-	if (smarr->count <= smarr->data_loc[id])
-		ERRORF("Item has been removed: count=%u <= data_loc[id=%u]=%u\n", smarr->count, id, smarr->data_loc[id]);
+    if (reg->id_loc_count <= id)
+        ERRORF("ID overflow: id_loc_count=%u <= id=%u\n", reg->id_loc_count, id);
+	if (reg->count <= reg->data_loc[id])
+		ERRORF("Item has been removed: count=%u <= data_loc[id=%u]=%u\n", reg->count, id, reg->data_loc[id]);
 
-	return smarr->data + smarr->elem_size * smarr->data_loc[id];
+	return reg->data + reg->elem_size * reg->data_loc[id];
 }
 
-void smarray_set(smarray_t *smarr, uint32_t id, void *new_data_ptr)
+void reg_set(reg_t *reg, uint32_t id, void *new_data_ptr)
 {
-    if (smarr->id_loc_count <= id)
-        ERRORF("ID overflow: id_loc_count=%u <= id=%u\n", smarr->id_loc_count, id);
-	if (smarr->count <= smarr->data_loc[id])
-		ERRORF("Item has been removed: count=%u <= data_loc[id=%u]=%u\n", smarr->count, id, smarr->data_loc[id]);
+    if (reg->id_loc_count <= id)
+        ERRORF("ID overflow: id_loc_count=%u <= id=%u\n", reg->id_loc_count, id);
+	if (reg->count <= reg->data_loc[id])
+		ERRORF("Item has been removed: count=%u <= data_loc[id=%u]=%u\n", reg->count, id, reg->data_loc[id]);
 
-	memcpy(smarr->data + smarr->elem_size * smarr->data_loc[id], new_data_ptr, smarr->elem_size);
+	memcpy(reg->data + reg->elem_size * reg->data_loc[id], new_data_ptr, reg->elem_size);
 }
 
 // Get data in memory-order
-void *smarray_iter_get(smarray_t *smarr, uint32_t data_num)
+void *reg_iter_get(reg_t *reg, uint32_t data_num)
 {
-    if (smarr->count <= data_num)
-		ERRORF("data_num overflow: count=%d <= data_num=%d\n", data_num, smarr->count);
+    if (reg->count <= data_num)
+		ERRORF("data_num overflow: count=%d <= data_num=%d\n", data_num, reg->count);
 
-    return smarr->data + smarr->elem_size * data_num;
+    return reg->data + reg->elem_size * data_num;
 }
 
 // Set data in memory-order
-void smarray_iter_set(smarray_t *smarr, uint32_t data_num, void *new_data_ptr)
+void reg_iter_set(reg_t *reg, uint32_t data_num, void *new_data_ptr)
 {
-    if (smarr->count <= data_num)
-		ERRORF("data_num overflow: count=%d <= data_num=%d\n", data_num, smarr->count);
+    if (reg->count <= data_num)
+		ERRORF("data_num overflow: count=%d <= data_num=%d\n", data_num, reg->count);
 
-    memcpy(smarr->data + smarr->elem_size * data_num, new_data_ptr, smarr->elem_size);
+    memcpy(reg->data + reg->elem_size * data_num, new_data_ptr, reg->elem_size);
 }
 
 // If smarr contains ptrs, contents this ptr points to must be freed before removal.
 // Remove data in ID-order
-uint32_t smarray_iter_rem(smarray_t *smarr, uint32_t data_num)
+uint32_t reg_iter_rem(reg_t *reg, uint32_t data_num)
 {
-    if (smarr->count <= data_num)
-		ERRORF("data_num overflow: count=%d <= data_num=%d\n", data_num, smarr->count);
+    if (reg->count <= data_num)
+		ERRORF("data_num overflow: count=%d <= data_num=%d\n", data_num, reg->count);
 
-    smarray_rem(smarr,  smarr->data_id[data_num]);
-    return smarr->data_id[data_num];
+    reg_rem(reg,  reg->data_id[data_num]);
+    return reg->data_id[data_num];
 }

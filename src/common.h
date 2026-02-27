@@ -26,11 +26,18 @@ typedef struct
     uint16_t x;
     uint16_t y;
 } pos16_t;
+
+typedef struct
+{
+    uint32_t x;
+    uint32_t y;
+} pos32_t;
 #define pos16_to_ui32(p) (uint32_t)((p.y << 16) + p.x)
 
 #define c(r, g, b) (Color){r, g, b, 255}
 #define pos8(x, y) (pos8_t){x, y}
 #define pos16(x, y) (pos16_t){x, y}
+#define pos32(x, y) (pos32_t){x, y}
 
 uint16_t umin16(uint16_t a, uint16_t b);
 uint16_t umax16(uint16_t a, uint16_t b);
@@ -277,7 +284,7 @@ void **allocate_memory_grid(uint32_t m, uint32_t n, uint32_t elem_size);
 
 void ***allocate_memory_cube(uint32_t i, uint32_t j, uint32_t k, uint32_t elem_size);
 
-/// SMART (& DYNAMIC) ARRAYS ///
+/// REGISTERS: SMART (& DYNAMIC) ARRAYS ///
 //https://www.youtube.com/watch?v=L4xOCvELWlU
 typedef struct
 {
@@ -285,32 +292,32 @@ typedef struct
 	uint32_t count;
 	uint32_t id_loc_count;
 	uint32_t cap;
-	void *data;
-	uint32_t *data_id;
-	uint32_t *data_loc;
-}smarray_t;
+	void *      data;
+	uint32_t *  data_id;
+	uint32_t *  data_loc;
+}reg_t;
 
-smarray_t *	smarray_create(uint16_t elem_size, uint32_t init_cap);
+reg_t *	reg_create(uint16_t elem_size, uint32_t init_cap);
 
-uint32_t 	smarray_add(smarray_t *smarr, void *new_data_ptr);
+uint32_t 	reg_add(reg_t *reg, void *new_data_ptr);
 
 // If smarr contains ptrs, contents this ptr points to must be freed before removal.
 // Remove data in ID-order
-void		smarray_rem(smarray_t *smarr, uint32_t id);
+void		reg_rem(reg_t *reg, uint32_t id);
 
 // Get data in ID-order
-void *		smarray_get(smarray_t *smarr, uint32_t id);
+void *		reg_get(reg_t *reg, uint32_t id);
 
 // Set data in ID-order
-void 		smarray_set(smarray_t *smarr, uint32_t id, void *new_data_ptr);
+void 		reg_set(reg_t *reg, uint32_t id, void *new_data_ptr);
 
 // Get data in memory-order
-void *		smarray_iter_get(smarray_t *smarr, uint32_t data_num);
+void *		reg_iter_get(reg_t *reg, uint32_t data_num);
 
 // Set data in memory-order
-void 		smarray_iter_set(smarray_t *smarr, uint32_t data_num, void *new_data_ptr);
+void 		reg_iter_set(reg_t *reg, uint32_t data_num, void *new_data_ptr);
 
 // If smarr contains ptrs, contents this ptr points to must be freed before removal.
 // Remove data in ID-order
 // Returns ID of removed element
-uint32_t    smarray_iter_rem(smarray_t *smarr, uint32_t data_num);
+uint32_t    reg_iter_rem(reg_t *reg, uint32_t data_num);

@@ -34,6 +34,7 @@ typedef struct
 } pos32_t;
 #define pos16_to_ui32(p) (uint32_t)((p.y << 16) + p.x)
 
+#define cA(r,g,b,a) (Color){r, g, b, a}
 #define c(r, g, b) (Color){r, g, b, 255}
 #define pos8(x, y) (pos8_t){x, y}
 #define pos16(x, y) (pos16_t){x, y}
@@ -56,6 +57,8 @@ int32_t clamp32(int32_t minv, int32_t x, int32_t maxv);
 float flmin(float a, float b);
 float flmax(float a, float b);
 float flclamp(float minv, float x, float maxv);
+
+float flerp(float v0, float v1, float dt);
 
 /// ARRAYS
 
@@ -318,6 +321,6 @@ void *		reg_iter_get(reg_t *reg, uint32_t data_num);
 void 		reg_iter_set(reg_t *reg, uint32_t data_num, void *new_data_ptr);
 
 // If smarr contains ptrs, contents this ptr points to must be freed before removal.
-// Remove data in ID-order
+// Remove data in memory-order
 // Returns ID of removed element
 uint32_t    reg_iter_rem(reg_t *reg, uint32_t data_num);

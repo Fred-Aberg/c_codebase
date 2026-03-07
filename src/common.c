@@ -43,6 +43,10 @@ void ui8_array_set(ui8_array_t array, uint32_t index, uint8_t value)
 		ERRORF("\nui8_array_t SET index overflow! i=%u cap=%u", index, array.capacity)
 }
 
+float flerp(float v0, float v1, float dt)
+{
+  return v0 + dt * (v1 - v0);
+}
 
 
 uint16_t ui16_array_get(ui16_array_t array, uint32_t index)
@@ -519,7 +523,7 @@ void str_append(str_t **str, char c)
 
 str_t *str_empty(uint32_t init_capacity)
 {
-	str_t *new_str = calloc(1, 2 * sizeof(uint32_t) + MAX(init_capacity * sizeof(char), 1));
+	str_t *new_str = calloc(1, 2 * sizeof(uint32_t) + init_capacity * sizeof(char));
 	new_str->capacity = init_capacity;
 	new_str->length = 1; // initial string is "" = {'\0'}
 
@@ -638,7 +642,7 @@ uint32_t reg_add(reg_t *reg, void *new_data_ptr)
 	{
 		reg->cap = reg->cap * 1.5f + 1;
 		reg->data = 		realloc(reg->data, reg->cap * reg->elem_size);
-		reg->data_id = 	realloc(reg->data_id, reg->cap * sizeof(uint32_t));
+		reg->data_id = 	    realloc(reg->data_id, reg->cap * sizeof(uint32_t));
 		reg->data_loc = 	realloc(reg->data_loc, reg->cap * sizeof(uint32_t));
 	}
 

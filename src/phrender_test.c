@@ -42,11 +42,10 @@ int main(int argc, char **argv)
     SetTraceLogLevel(LOG_ERROR);
     ph_init(10);
 
-    ph_set_resize_mode(PRESERVE_TILESIZE);
+    ph_set_resize_mode(PRESERVE_GRID_WIDTH);
 
     texmap_t tmap = ph_load_texmap("Resources/Fonts/font_base.png", 10);
-    Texture2D isocube = LoadTexture("Resources/isocube.png");
-    Texture2D square = LoadTexture("Resources/square.png");
+    texmap_t tmap_square = ph_load_texmap("Resources/square.png", 10);
 
     #define N_RANDOM_POS 64
     pos16_t rnd_pos[N_RANDOM_POS];
@@ -63,18 +62,18 @@ int main(int argc, char **argv)
 
         double t = GetTime();
         BeginDrawing();
-        ph_clear(GRAY);
+        ClearBackground(BLACK);
+        // misc_drawing_tests(tmap, t);
 
-        misc_drawing_tests(tmap, t);
-            // ph_place_texture(tmap, pos16(0, 4), rnd_pos[i%N_RANDOM_POS], RED);
-        ph_render();
         for (uint32_t i = 0; i < draws; i++)
-            DrawTexture(isocube, 10, 10, WHITE);
+            ph_place_texture(tmap_square, pos16(0, 0), rnd_pos[i%N_RANDOM_POS], (i%2)? RED : BLUE);
+
         DrawFPS(0, 0);
         EndDrawing();
     }
 
     ph_deinit();
     ph_unload_texmap(tmap);
+    ph_unload_texmap(tmap_square);
     return 0;
 }

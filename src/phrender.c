@@ -61,9 +61,9 @@ uint16_t ph_get_tile_resolution()
 {
     return G->tile_resolution;
 }
-void ph_clear()
+void ph_clear(col_t bg_col)
 {
-    ImageClearBackground(&G->rndr_img, BLACK);
+    ImageClearBackground(&G->rndr_img, bg_col);
 }
 
 void ph_render()
@@ -161,6 +161,18 @@ int16_t *ph_get_global_offsets()
     return &G->gl_pxl_offset_x;
 }
 
+
+void ph_place_textureP(texmap_t tmap, pos16_t tpos, int16_t x, int16_t y, col_t col)
+{
+    Rectangle srcRec = { tpos.x * tmap.subtex_size, tpos.y * tmap.subtex_size, tmap.subtex_size, tmap.subtex_size };
+    Rectangle dstRec = {
+        x + G->gl_pxl_offset_x,
+        y + G->gl_pxl_offset_y,
+        tmap.subtex_size,
+        tmap.subtex_size
+    };
+    ImageDraw(&G->rndr_img, tmap.src_img, srcRec, dstRec, col);
+}
 void ph_place_textureF(texmap_t tmap, pos16_t tpos, float x, float y, col_t col)
 {
     Rectangle srcRec = { tpos.x * tmap.subtex_size, tpos.y * tmap.subtex_size, tmap.subtex_size, tmap.subtex_size };
@@ -194,6 +206,14 @@ void ph_paintX(pos16_t p0, pos16_t p1, col_t col, int16_t x_p_offset, int16_t y_
         G->tile_resolution * (p1.x - p0.x + 1),
 		G->tile_resolution * (p1.y - p0.y + 1), col);
 }
+void ph_paintP(pos16_t p0, pos16_t p1, col_t col)
+{
+    ImageDrawRectangle(&G->rndr_img,
+        p0.x + G->gl_pxl_offset_x,
+        p0.y + G->gl_pxl_offset_y,
+        (p1.x - p0.x + 1),
+		(p1.y - p0.y + 1), col);
+}
 void ph_paint(pos16_t p0, pos16_t p1, col_t col) { ph_paintX( p0,  p1,  col, 0, 0); }
 void ph_paintF(float x, float y, float w, float h, col_t col)
 {
@@ -202,4 +222,13 @@ void ph_paintF(float x, float y, float w, float h, col_t col)
         (G->tile_resolution * y) + G->gl_pxl_offset_y,
         G->tile_resolution * w,
 		G->tile_resolution * h, col);
+}
+
+Image ph_get_rndr_img(){
+    return G->rndr_img;
+}
+
+void ph_screen_rndr_img_ratio(float *x_ratio, float *y_ratio){
+    *x_ratio = (float)GetScreenWidth() / G->rndr_img.width;
+    *y_ratio = (float)GetScreenHeight() / G->rndr_img.height;
 }

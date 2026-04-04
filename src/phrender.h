@@ -17,7 +17,7 @@ void ph_unload_texmap(texmap_t tmap);
 void ph_init(uint16_t tile_resolution);
 void ph_deinit();
 
-void ph_clear();
+void ph_clear(col_t bg_col);
 void ph_render();
 
 #define PRESERVE_TILESIZE 0
@@ -44,10 +44,15 @@ int16_t *ph_get_global_offsets();
 void ph_place_texture(texmap_t tmap, pos16_t tpos, pos16_t pos, col_t col);
 void ph_place_textureX(texmap_t tmap, pos16_t tpos, pos16_t pos, col_t col, int16_t x_p_offset, int16_t y_p_offset);
 void ph_place_textureF(texmap_t tmap, pos16_t tpos, float x, float y, col_t col);
+void ph_place_textureP(texmap_t tmap, pos16_t tpos, int16_t x, int16_t y, col_t col);
 
 void ph_paint(pos16_t p0, pos16_t p1, col_t col);
+void ph_paintP(pos16_t p0, pos16_t p1, col_t col);
 void ph_paintX(pos16_t p0, pos16_t p1, col_t col, int16_t x_p_offset, int16_t y_p_offset);
 void ph_paintF(float x, float y, float w, float h, col_t col);
 void ph_paintPF(pos16_t p0, float width, float height, col_t col);
 
 #define ph_plot(p, col) ph_paint(p, p, col)
+Image ph_get_rndr_img();
+
+void ph_screen_rndr_img_ratio(float *x_ratio, float *y_ratio);

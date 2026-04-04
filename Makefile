@@ -17,4 +17,4 @@ unit_tests: _unit_tests
 _ph_test: clean
 	gcc src/phrender_test.c  src/common.c -Wall -g -lc -lm -lraylib -I /usr/local/include -o bin/ph_test
 ph_test: _ph_test
-	./bin/ph_test
+	./bin/ph_test 10

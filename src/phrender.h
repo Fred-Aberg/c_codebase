@@ -11,6 +11,13 @@ typedef struct
     pos16_t     texmap_size;    // Dimensions in terms of sub-textures not pixels - not necessarily square
 }texmap_t;
 
+typedef struct
+{
+    int16_t x;
+    int16_t y;
+}scpos_t;
+#define scpos(_x,_y) (scpos_t) {.x = _x, .y = _y}
+
 texmap_t ph_load_texmap(const char *filepath, uint8_t subtex_size);
 void ph_unload_texmap(texmap_t tmap);
 
@@ -29,6 +36,9 @@ void ph_set_grid_height(uint16_t height);
 uint16_t ph_get_grid_width();
 uint16_t ph_get_grid_height();
 
+uint16_t ph_get_grid_pxl_width();   // Imaginary "game" pxls
+uint16_t ph_get_grid_pxl_height();
+
 uint16_t ph_get_grid_tile_size();
 
 void ph_check_resize();
@@ -37,7 +47,6 @@ int16_t *ph_get_global_offsets();
 
 void ph_place_texture(texmap_t tmap, pos16_t tpos, pos16_t pos, col_t col);
 void ph_place_textureX(texmap_t tmap, pos16_t tpos, pos16_t pos, col_t col, int16_t x_p_offset, int16_t y_p_offset);
-void ph_place_textureF(texmap_t tmap, pos16_t tpos, float x, float y, col_t col);
 void ph_place_textureP(texmap_t tmap, pos16_t tpos, int16_t x, int16_t y, col_t col);
 
 void ph_paint(pos16_t p0, pos16_t p1, col_t col);
@@ -47,4 +56,5 @@ void ph_paintF(float x, float y, float w, float h, col_t col);
 void ph_paintPF(pos16_t p0, float width, float height, col_t col);
 
 #define ph_plot(p, col) ph_paint(p, p, col)
-void ph_screen_rndr_img_ratio(float *x_ratio, float *y_ratio);
+scpos_t ph_scpos_to_phpos(scpos_t scpos); // Converts RL screen coords to fake pixels
+float ph_get_scgr_ratio();

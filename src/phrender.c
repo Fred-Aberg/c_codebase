@@ -72,6 +72,8 @@ void ph_set_grid_height(uint16_t height){
 uint16_t ph_get_grid_width() { return G->width; }
 uint16_t ph_get_grid_height() { return G->height; }
 uint16_t ph_get_grid_tile_size() { return G->tile_size; }
+uint16_t ph_get_grid_pxl_width() { return G->width*G->tile_size; }
+uint16_t ph_get_grid_pxl_height() { return G->height*G->tile_size; }
 
 void ph_check_resize(){
     if(IsWindowResized() == false)
@@ -104,22 +106,12 @@ int16_t *ph_get_global_offsets(){
 void ph_place_textureP(texmap_t tmap, pos16_t tpos, int16_t x, int16_t y, col_t col){
     Rectangle srcRec = { tpos.x * tmap.subtex_size, tpos.y * tmap.subtex_size, tmap.subtex_size, tmap.subtex_size };
     Rectangle dstRec = {
-        x*G->pxl_scgr_ratio + G->gl_pxl_offset_x,
-        y*G->pxl_scgr_ratio + G->gl_pxl_offset_y,
+        (x + G->gl_pxl_offset_x)*G->pxl_scgr_ratio,
+        (y + G->gl_pxl_offset_y)*G->pxl_scgr_ratio,
         tmap.subtex_size*G->pxl_scgr_ratio,
         tmap.subtex_size*G->pxl_scgr_ratio
     };
     DrawTexturePro(tmap.src_tex, srcRec, dstRec, (Vector2){0,0} , 0.0f, col);
-}
-void ph_place_textureF(texmap_t tmap, pos16_t tpos, float x, float y, col_t col){
-    Rectangle srcRec = { tpos.x * tmap.subtex_size, tpos.y * tmap.subtex_size, tmap.subtex_size, tmap.subtex_size };
-    Rectangle dstRec = {
-        (G->pxl_adj_tile_size * x) + G->gl_pxl_offset_x,
-        (G->pxl_adj_tile_size * y) + G->gl_pxl_offset_y,
-        G->pxl_adj_tile_size,
-        G->pxl_adj_tile_size
-    };
-    DrawTexturePro(tmap.src_tex, srcRec, dstRec, (Vector2){0,0} , 0.0f, WHITE);
 }
 
 void ph_place_textureX(texmap_t tmap, pos16_t tpos, pos16_t pos, col_t col, int16_t x_p_offset, int16_t y_p_offset)
@@ -127,8 +119,8 @@ void ph_place_textureX(texmap_t tmap, pos16_t tpos, pos16_t pos, col_t col, int1
 
     Rectangle srcRec = { tpos.x * tmap.subtex_size, tpos.y * tmap.subtex_size, tmap.subtex_size, tmap.subtex_size };
     Rectangle dstRec = {
-        ((G->tile_size * pos.x) + x_p_offset)*G->pxl_scgr_ratio + G->gl_pxl_offset_x,
-        ((G->tile_size * pos.y) + y_p_offset)*G->pxl_scgr_ratio + G->gl_pxl_offset_y,
+        ((G->tile_size * pos.x) + x_p_offset + G->gl_pxl_offset_x)*G->pxl_scgr_ratio,
+        ((G->tile_size * pos.y) + y_p_offset + G->gl_pxl_offset_y)*G->pxl_scgr_ratio,
         G->pxl_adj_tile_size,
         G->pxl_adj_tile_size };
     DrawTexturePro(tmap.src_tex, srcRec, dstRec, (Vector2){0,0} , 0.0f, col);
@@ -138,8 +130,8 @@ void ph_place_texture(texmap_t tmap, pos16_t tpos, pos16_t pos, col_t col) { ph_
 void ph_paintX(pos16_t p0, pos16_t p1, col_t col, int16_t x_p_offset, int16_t y_p_offset)
 {
     DrawRectangle(
-        ((G->tile_size * p0.x) + x_p_offset)*G->pxl_scgr_ratio + G->gl_pxl_offset_x,
-        ((G->tile_size * p0.y) + y_p_offset)*G->pxl_scgr_ratio + G->gl_pxl_offset_y,
+        ((G->tile_size * p0.x) + x_p_offset + G->gl_pxl_offset_x)*G->pxl_scgr_ratio,
+        ((G->tile_size * p0.y) + y_p_offset + G->gl_pxl_offset_y)*G->pxl_scgr_ratio,
         G->pxl_adj_tile_size*(p1.x - p0.x + 1),
 		G->pxl_adj_tile_size*(p1.y - p0.y + 1), col);
 }
@@ -155,8 +147,14 @@ void ph_paint(pos16_t p0, pos16_t p1, col_t col) { ph_paintX( p0,  p1,  col, 0, 
 void ph_paintF(float x, float y, float w, float h, col_t col)
 {
     DrawRectangle(
-        (G->pxl_adj_tile_size*x) + G->gl_pxl_offset_x,
-        (G->pxl_adj_tile_size*y) + G->gl_pxl_offset_y,
+        G->pxl_adj_tile_size*(x + G->gl_pxl_offset_x),
+        G->pxl_adj_tile_size*(y + G->gl_pxl_offset_y),
         G->pxl_adj_tile_size*w,
 		G->pxl_adj_tile_size*h, col);
 }
+
+scpos_t ph_scpos_to_phpos(scpos_t scpos)
+{
+    return scpos(scpos.x/G->pxl_scgr_ratio, scpos.y/G->pxl_scgr_ratio);
+}
+float ph_get_scgr_ratio() { return G->pxl_scgr_ratio; }
